@@ -12,8 +12,8 @@ File Allocation Table :
 
 
 RAM : 
-2^16 addresses (65 536) of 1 byte
-65 536 bytes = 65 kilobytes
+2^32 addresses (4 294 967 296) of 1 byte
+4 294 967 296 bytes = 4 gigabytes
 
 Registers : 
 Can hold 32 bits value (4 bytes)

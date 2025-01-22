@@ -35,6 +35,24 @@ const (
 	SWAP
 )
 
+var numberOfArgs = map[string]int{
+	"HLT":  0,
+	"RET":  0,
+	"AND":  2,
+	"OR":   2,
+	"NOT":  1,
+	"ADD":  2,
+	"ADDI": 2,
+	"MOV":  2,
+	"PUSH": 1,
+	"POP":  1,
+	"CMP":  3,
+	"JMP":  1,
+	"WRT":  0,
+	"READ": 0,
+	"SWAP": 2,
+}
+
 //////////
 // MAIN //
 //////////
@@ -80,20 +98,23 @@ func readProgram(program string) [][]string {
 ///////////////////////
 
 func programCleaner(assemblerProgram [][]string) [][]int {
-	assemblerProgram = cleanEmptyOpe(assemblerProgram)
-	checkUnexpectedCharacter(assemblerProgram)
-	fmt.Println((assemblerProgram))
-	checkMnemonics(assemblerProgram)
-	checkArgs(assemblerProgram)
-	checkRegisters(assemblerProgram)
-	assemblerProgram = countLines(assemblerProgram)
+	var opcodeProgram [][]int
+	var labels map[string]int
+	for i, line := range assemblerProgram {
+		var skipOrNot bool = skipEmptyLine(line)
+		if !(skipOrNot) {
+			line = checkUnexpectedCharacter(line)
+			checkWords(line, i)
+			checkNumberOfArgs(line, i)
+			checkRegisters(line, i)
+			labels = checkJumps(line, labels)
+		}
+	}
 
 	// Jumps
-	var labels map[string]int
-	labels, assemblerProgram = checkJumps(assemblerProgram)
 	assemblerProgram = createJumpAddress(assemblerProgram, labels)
 	fmt.Println((assemblerProgram))
-	var opcodeProgram [][]int = mnemonicsToOpcode(assemblerProgram)
+	//var opcodeProgram [][]int = mnemonicsToOpcode(assemblerProgram)
 
 	return opcodeProgram
 }
@@ -183,43 +204,15 @@ func mnemonicsToOpcode(assemblerProgram [][]string) [][]int {
 	return opcodeProgram
 }
 
-func checkRegisters(assemblerProgram [][]string) {
-	for i := range assemblerProgram {
-		for j, arg := range assemblerProgram[i] {
-			if arg[0] == 'R' {
-				var reg int = strToInt(assemblerProgram[i][j][1:])
-				if reg < 0 || reg > 15 {
-					err := "\rRegister out of range \"" + assemblerProgram[i][j] + "\" at line " + intToStr(i+1)
-					log.Fatal(err)
-				}
-			}
-		}
+func checkArgs(line []string) {
+	var foundError bool = false
+	if inList([]string{"AND", "OR", "SWAP"}, line[0]) && 0 < strToInt(line[1][1:]) && strToInt(line[1][1:]) < 16 {
+		foundError = true
 	}
 }
 
-func countLines(assemblerProgram [][]string) [][]string {
-	for i := range len(assemblerProgram) {
-		assemblerProgram[i] = append(assemblerProgram[i], intToStr(i))
-	}
-	return assemblerProgram
-}
-
-func cleanEmptyOpe(assemblerProgram [][]string) [][]string {
-	var cleanedProgram [][]string
-	newLine := 0
-	for i := range len(assemblerProgram) {
-		if len(assemblerProgram[i][0]) != 0 {
-			cleanedProgram = append(cleanedProgram, []string{})
-			for j := range len(assemblerProgram[i]) {
-				if len(assemblerProgram[i][j]) != 0 {
-					cleanedProgram[i-newLine] = append(cleanedProgram[i-newLine], assemblerProgram[i][j])
-				}
-			}
-		} else {
-			newLine += 1
-		}
-	}
-	return cleanedProgram
+func skipEmptyLine(line []string) bool {
+	return len(line) == 0
 }
 
 func createJumpAddress(assemblerProgram [][]string, labels map[string]int) [][]string {
@@ -246,42 +239,39 @@ func checkJumps(assemblerProgram [][]string) (map[string]int, [][]string) {
 	return labels, assemblerProgram
 }
 
-func checkMnemonics(assemblerProgram [][]string) {
-	for i, operation := range assemblerProgram {
-		if !inList(mnemonics, operation[0]) && string(operation[0][len(operation[0])-1]) != ":" && len(operation) != 1 {
-			err := "\rUnrecognized mnemonics \"" + operation[0] + "\" at line " + intToStr(i+1)
-			log.Fatal(err)
+//////////////////////////////////
+// TO DO : TOKENIZATION OF THE PROGRAM
+///////////////////////////////////////
+
+func checkMnemonics(line []string, i int) {
+	var newLine [][]string
+	for j, word := range line {
+		if inList(mnemonics, line[j]) {
+			newLine = append(newLine, []string{word, "Operation"})
 		}
+		err := "\rUnrecognized mnemonics \"" + line[0] + "\" at line " + intToStr(i+1)
+		log.Fatal(err)
 	}
 }
 
-func checkUnexpectedCharacter(assemblerProgram [][]string) {
-	validChars := "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz1234567890<>=:-"
-	for i := 0; i < len(assemblerProgram); i++ {
-		for j := 0; j < len(assemblerProgram[i]); j++ {
-			cleanedString := ""
-			for k := 0; k < len(assemblerProgram[i][j]); k++ {
-				char := string(assemblerProgram[i][j][k])
-				if strings.Contains(validChars, char) {
-					cleanedString += char
-				}
+func checkUnexpectedCharacter(line []string) []string {
+	validChars := "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz1234567890:-"
+	for i := range len(line) {
+		var cleanedString string = ""
+		for _, character := range line[i] {
+			if strings.Contains(validChars, string(character)) {
+				cleanedString += string(character)
 			}
-			assemblerProgram[i][j] = cleanedString
 		}
+		line[i] = cleanedString
 	}
+	return line
 }
 
-func checkArgs(assemblerProgram [][]string) {
-	for _, operation := range assemblerProgram {
-		if inList([]string{"OR", "AND", "MOV", "ADD", "ADDI", "SWAP"}, operation[0]) && len(operation) != 3 {
-			err := "\rWrong number of arguments for " + operation[0] + " at line " + operation[len(operation)-1]
-			log.Fatal(err)
-		} else if inList([]string{"NOT", "POP", "PUSH"}, operation[0]) && len(operation) != 2 {
-			err := "\rWrong numbers of arguments for " + operation[0] + " at line " + operation[len(operation)-1]
-			log.Fatal(err)
-		} else if string(operation[0][len(operation[0])-1]) == ":" && len(operation) != 2 {
-
-		}
+func checkNumberOfArgs(line []string, i int) {
+	if numberOfArgs[line[0]] != len(line)-1 {
+		err := "\rWrong number of args for \"" + line[0] + "\" at line " + intToStr(i+1)
+		log.Fatal(err)
 	}
 }
 
