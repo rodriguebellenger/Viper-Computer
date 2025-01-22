@@ -1,3 +1,0 @@
-MOV R1 2
-MOV R2 4
-SWAP R1 R2

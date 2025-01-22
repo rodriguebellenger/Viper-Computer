@@ -1,4 +1,0 @@
-MOV R1, 2
-MOV R2 2
-ADD R1 R2
-JMP -4
