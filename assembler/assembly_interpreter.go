@@ -40,7 +40,9 @@ const (
 //////////
 
 func main() {
-	content, err := os.ReadFile("assembler/debugging/program_test/loops.txt")
+	args := os.Args[1:] // Skip the program name
+	fmt.Println(args)
+	content, err := os.ReadFile("assembler/program_test/" + args[0])
 	if err != nil {
 		log.Fatal("\rCouldn't read file")
 	}
@@ -80,6 +82,7 @@ func readProgram(program string) [][]string {
 func programCleaner(assemblerProgram [][]string) [][]int {
 	assemblerProgram = cleanEmptyOpe(assemblerProgram)
 	checkUnexpectedCharacter(assemblerProgram)
+	fmt.Println((assemblerProgram))
 	checkMnemonics(assemblerProgram)
 	checkArgs(assemblerProgram)
 	checkRegisters(assemblerProgram)
@@ -165,8 +168,10 @@ func mnemonicsToOpcode(assemblerProgram [][]string) [][]int {
 			newLine = []int{RET}
 		} else if string(line[0][len(line[0])-1]) == ":" {
 			load = 1
+		} else if line[0] == "HLT" {
+			newLine = []int{HLT}
 		} else {
-			log.Fatal("Err in mnemonicsToOpcode")
+			log.Fatal("Err in mnemonicsToOpcode : " + line[0])
 		}
 		switch load {
 		case 0:
@@ -285,6 +290,7 @@ func checkArgs(assemblerProgram [][]string) {
 /////////////////////////
 
 func executeProgram(assemblerProgram [][]int) {
+	var name string
 	for i := 0; i < len(assemblerProgram); i++ {
 		switch assemblerProgram[i][0] {
 		case HLT:
@@ -348,7 +354,8 @@ func executeProgram(assemblerProgram [][]int) {
 		case JMP:
 			i = assemblerProgram[i][1]
 		}
-		//fmt.Println(i, registers, stack)
+		fmt.Println(i, assemblerProgram[i], registers, stack)
+		fmt.Scan(&name)
 	}
 	fmt.Println(registers, stack)
 }
