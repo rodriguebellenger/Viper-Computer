@@ -1,0 +1,26 @@
+MOV R1 13
+MOV R4 1
+PUSH R1
+POP R3
+
+PaireOuImpaire:
+CMP R3 R4 E
+JMP Impaire
+CMP R3 R0 L
+JMP SommePaire
+ADDI R3 -2
+JMP PaireOuImpaire
+
+Impaire:
+ADDI R1 -1
+JMP SommePaire
+
+SommePaire:
+CMP R1 R0 L
+JMP End
+ADD R2 R1
+ADDI R1 -2
+CMP R1 R0 G
+JMP SommePaire
+
+End:

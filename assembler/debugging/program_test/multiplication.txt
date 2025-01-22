@@ -1,0 +1,14 @@
+JMP End
+
+Mul:
+ADD R2 R1
+ADDI R1 -1
+CMP R1 R0 G
+JMP Mul
+RET
+
+End:
+
+MOV R1 1
+MOV R2 1
+JMP Mul

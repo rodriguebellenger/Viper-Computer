@@ -1,0 +1,55 @@
+Bellenger Architecture
+Single threaded (which means no program can interfere with each other)
+
+Long term memory : 
+The memory is cut in sector of 256 bytes (txt files)
+256*256 bytes = 65 536 bytes = 65 kilobytes
+Structure of a sector :
+- One byte for next sector to look after (0x00 if file is over)
+- 255 bytes of raw data
+
+File Allocation Table :
+
+
+RAM : 
+2^16 addresses (65 536) of 1 byte
+65 536 bytes = 65 kilobytes
+
+Registers : 
+Can hold 32 bits value (4 bytes)
+r0 : constant value of 0, cannot be changed
+r1 : operand 1 for the composed operations, can be changed
+r2 : operand 2 for the composed operations, can be changed
+r3 : result operand for the composed operations, can be changed
+r4 : free register, can be changed
+r5 : free register, can be changed
+r6 : free register, can be changed
+r7 : free register, can be changed
+r8 : free register, can be changed
+r9 : free register, can be changed
+r10 : free register, can be changed
+r11 : free register, can be changed
+r12 : free register, can be changed
+r13 : free register, can be changed
+r14 : free register, can be changed
+r15 : 
+pp (program pointer) : remember the current address instruction, can be modified by JMP, CALL and RET
+
+Assembler : 
+File : 
+.data
+string txt "Hello, World!"
+int32 n 428645
+
+.bss
+reserved 1024
+
+.code
+MOV R1 2
+MOV R2 2
+ADD R1 R2
+
+Two linear reading :
+
+1) Names/Labels -> offset : 
+
