@@ -105,6 +105,8 @@ func programCleaner(assemblerProgram [][]string) [][]int {
 		if !(skipOrNot) {
 			line = checkUnexpectedCharacter(line)
 			checkWords(line, i)
+			// Comment test
+			// I am doing a test with git
 			checkNumberOfArgs(line, i)
 			checkRegisters(line, i)
 			labels = checkJumps(line, labels)
