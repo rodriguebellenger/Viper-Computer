@@ -206,49 +206,46 @@ func mnemonicsToOpcode(assemblerProgram [][]string) [][]int {
 }
 
 func checkArgs(line [][]string, i int) {
-	var foundError bool = false
 	switch line[0][0] {
-	case HLT:
-		break
-	case RET:
-		i = stack[len(stack)-1]
-		stack = stack[:len(stack)-1]
-	case MOV:
-		var arg int = assemblerProgram[i][1]
-		registers[arg] = assemblerProgram[i][2]
-	case ADD:
-		var arg1 int = assemblerProgram[i][1]
-		var arg2 int = assemblerProgram[i][2]
-		registers[arg1] = registers[arg1] + registers[arg2]
-	case ADDI:
-		var arg1 int = assemblerProgram[i][1]
-		var arg2 int = assemblerProgram[i][2]
-		registers[arg1] = registers[arg1] + arg2
-	case PUSH:
+	case "HLT":
+	case "RET":
+	case "MOV":
+		if line[1][1] != "Register" || line[2][1] != "Register" {
+			err := "Wrong type of argument for \""+line[0][0]+"\" at line "+intToStr(i+1)
+			log.Fatal(err)
+		}
+	case "ADD":
+		if line[1][1] != "Register" || line[2][1] != "Register" {
+			err := "Wrong type of argument for \""+line[0][0]+"\" at line "+intToStr(i+1)
+			log.Fatal(err)
+		}
+	case "ADDI":
+		if line
+	case "PUSH":
 		var arg int = assemblerProgram[i][1]
 		stack = append(stack, registers[arg])
-	case POP:
+	case "POP":
 		var arg int = assemblerProgram[i][1]
 		registers[arg] = stack[len(stack)-1]
 		stack = stack[:len(stack)-1]
-	case AND:
+	case "AND":
 		var arg1 int = assemblerProgram[i][1]
 		var arg2 int = assemblerProgram[i][2]
 		registers[arg1] = registers[arg1] & registers[arg2]
-	case OR:
+	case "OR":
 		var arg1 int = assemblerProgram[i][1]
 		var arg2 int = assemblerProgram[i][2]
 		registers[arg1] = registers[arg1] | registers[arg2]
-	case NOT:
+	case "NOT":
 		var arg int = assemblerProgram[i][1]
 		registers[arg] = ^registers[arg]
-	case SWAP:
+	case "SWAP":
 		var arg1 int = assemblerProgram[i][1]
 		var arg2 int = assemblerProgram[i][2]
 		intermediateVariable := registers[arg1]
 		registers[arg1] = registers[arg2]
 		registers[arg2] = intermediateVariable
-	case CMP:
+	case "CMP":
 		var arg1 int = assemblerProgram[i][1]
 		var arg2 int = assemblerProgram[i][2]
 		var arg3 int = assemblerProgram[i][3]
@@ -266,7 +263,7 @@ func checkArgs(line [][]string, i int) {
 				i += 1
 			}
 		}
-	case JMP:
+	case "JMP":
 		i = assemblerProgram[i][1]
 	}
 }
@@ -310,7 +307,7 @@ func checkWords(line []string, i int) [][]string {
 			newLine = append(newLine, []string{word, "Comparison"})
 		} else if word[len(word)-1] == ':' {
 			newLine = append(newLine, []string{word, "Label"})
-		} else {
+		} else if {
 			err := "\rUnrecognized word \"" + word + "\" at line " + intToStr(i+1)
 			log.Fatal(err)
 		}
