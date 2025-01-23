@@ -100,15 +100,14 @@ func readProgram(program string) [][]string {
 func programCleaner(assemblerProgram [][]string) [][]int {
 	var opcodeProgram [][]int
 	var labels map[string]int
+	var tokenizedProgram [][][]string
 	for i, line := range assemblerProgram {
 		var skipOrNot bool = skipEmptyLine(line)
 		if !(skipOrNot) {
 			line = checkUnexpectedCharacter(line)
-			checkWords(line, i)
-			// Comment test
-			// I am doing a test with git
 			checkNumberOfArgs(line, i)
-			checkRegisters(line, i)
+			tokenizedProgram = append(tokenizedProgram, checkWords(line, i))
+			checkArgs(tokenizedProgram[i], i)
 			labels = checkJumps(line, labels)
 		}
 	}
@@ -206,10 +205,69 @@ func mnemonicsToOpcode(assemblerProgram [][]string) [][]int {
 	return opcodeProgram
 }
 
-func checkArgs(line []string) {
+func checkArgs(line [][]string, i int) {
 	var foundError bool = false
-	if inList([]string{"AND", "OR", "SWAP"}, line[0]) && 0 < strToInt(line[1][1:]) && strToInt(line[1][1:]) < 16 {
-		foundError = true
+	switch line[0][0] {
+	case HLT:
+		break
+	case RET:
+		i = stack[len(stack)-1]
+		stack = stack[:len(stack)-1]
+	case MOV:
+		var arg int = assemblerProgram[i][1]
+		registers[arg] = assemblerProgram[i][2]
+	case ADD:
+		var arg1 int = assemblerProgram[i][1]
+		var arg2 int = assemblerProgram[i][2]
+		registers[arg1] = registers[arg1] + registers[arg2]
+	case ADDI:
+		var arg1 int = assemblerProgram[i][1]
+		var arg2 int = assemblerProgram[i][2]
+		registers[arg1] = registers[arg1] + arg2
+	case PUSH:
+		var arg int = assemblerProgram[i][1]
+		stack = append(stack, registers[arg])
+	case POP:
+		var arg int = assemblerProgram[i][1]
+		registers[arg] = stack[len(stack)-1]
+		stack = stack[:len(stack)-1]
+	case AND:
+		var arg1 int = assemblerProgram[i][1]
+		var arg2 int = assemblerProgram[i][2]
+		registers[arg1] = registers[arg1] & registers[arg2]
+	case OR:
+		var arg1 int = assemblerProgram[i][1]
+		var arg2 int = assemblerProgram[i][2]
+		registers[arg1] = registers[arg1] | registers[arg2]
+	case NOT:
+		var arg int = assemblerProgram[i][1]
+		registers[arg] = ^registers[arg]
+	case SWAP:
+		var arg1 int = assemblerProgram[i][1]
+		var arg2 int = assemblerProgram[i][2]
+		intermediateVariable := registers[arg1]
+		registers[arg1] = registers[arg2]
+		registers[arg2] = intermediateVariable
+	case CMP:
+		var arg1 int = assemblerProgram[i][1]
+		var arg2 int = assemblerProgram[i][2]
+		var arg3 int = assemblerProgram[i][3]
+		switch arg3 {
+		case 1:
+			if !(registers[arg1] < registers[arg2]) {
+				i += 1
+			}
+		case 2:
+			if !(registers[arg1] > registers[arg2]) {
+				i += 1
+			}
+		case 3:
+			if registers[arg1]^registers[arg2] != 0 {
+				i += 1
+			}
+		}
+	case JMP:
+		i = assemblerProgram[i][1]
 	}
 }
 
@@ -241,19 +299,23 @@ func checkJumps(assemblerProgram [][]string) (map[string]int, [][]string) {
 	return labels, assemblerProgram
 }
 
-//////////////////////////////////
-// TO DO : TOKENIZATION OF THE PROGRAM
-///////////////////////////////////////
-
-func checkMnemonics(line []string, i int) {
+func checkWords(line []string, i int) [][]string {
 	var newLine [][]string
-	for j, word := range line {
-		if inList(mnemonics, line[j]) {
+	for _, word := range line {
+		if inList(mnemonics, word) {
 			newLine = append(newLine, []string{word, "Operation"})
+		} else if strToInt(word[1:]) < 16 && strToInt(word[1:]) >= 0 && inList([]string{"r", "R"}, string(word[0])) {
+			newLine = append(newLine, []string{word, "Register"})
+		} else if inList([]string{"G", "L", "E"}, word) {
+			newLine = append(newLine, []string{word, "Comparison"})
+		} else if word[len(word)-1] == ':' {
+			newLine = append(newLine, []string{word, "Label"})
+		} else {
+			err := "\rUnrecognized word \"" + word + "\" at line " + intToStr(i+1)
+			log.Fatal(err)
 		}
-		err := "\rUnrecognized mnemonics \"" + line[0] + "\" at line " + intToStr(i+1)
-		log.Fatal(err)
 	}
+	return newLine
 }
 
 func checkUnexpectedCharacter(line []string) []string {
