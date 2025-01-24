@@ -142,6 +142,7 @@ func skipEmptyLine(line []string) bool {
 	return len(line) == 0
 }
 
+// check change of account
 func delEmptyArgs([]string) []string {
 	for i := range line {
 		if len(line[i])==0 {
