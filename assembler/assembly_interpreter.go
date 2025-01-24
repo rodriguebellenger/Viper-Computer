@@ -116,13 +116,13 @@ func readProgram(program string) [][]string {
 ///////////////////////
 
 func programCleaner(assemblerProgram [][]string) [][]int {
-	var opcodeProgram [][]int
 	var labels map[string]int
 	var tokenizedProgram [][][]string
 	for i, line := range assemblerProgram {
 		var skipOrNot bool = skipEmptyLine(line)
 		if !(skipOrNot) {
 			line = checkUnexpectedCharacter(line)
+			assemblerProgram[i] = delEmptyArgs(line)
 			checkNumberOfArgs(line, i)
 			tokenizedProgram = append(tokenizedProgram, checkWords(line, i))
 			checkSyntax(tokenizedProgram[i], i)
@@ -140,6 +140,15 @@ func programCleaner(assemblerProgram [][]string) [][]int {
 
 func skipEmptyLine(line []string) bool {
 	return len(line) == 0
+}
+
+func delEmptyArgs([]string) []string {
+	for i := range line {
+		if len(line[i])==0 {
+			line = append(slice[:i], slice[i+1:]...)
+		}
+	}
+	return line
 }
 
 func checkUnexpectedCharacter(line []string) []string {
