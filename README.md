@@ -109,5 +109,4 @@ Create a label that you can jump to.
 ## Registers
 
 Registers 0 through 15.
-The R0 is constant and will always be 0.
 There are still no convention about the use of any other registers.

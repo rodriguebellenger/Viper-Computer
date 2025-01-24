@@ -125,8 +125,8 @@ func programCleaner(assemblerProgram [][]string) [][]int {
 			assemblerProgram[i] = delEmptyArgs(line)
 			checkNumberOfArgs(line, i)
 			tokenizedProgram = append(tokenizedProgram, checkWords(line, i))
-			checkSyntax(tokenizedProgram[i], i)
-			labels = checkJumps(line, labels)
+			checkSyntax(tokenizedProgram[i], syntaxRules[tokenizedProgram[i][0][0]], i)
+			tokenizedProgram, labels = checkJumps(line, labels)
 		}
 	}
 
@@ -143,10 +143,10 @@ func skipEmptyLine(line []string) bool {
 }
 
 // check change of account
-func delEmptyArgs([]string) []string {
+func delEmptyArgs(line []string) []string {
 	for i := range line {
-		if len(line[i])==0 {
-			line = append(slice[:i], slice[i+1:]...)
+		if len(line[i]) == 0 {
+			line = append(line[:i], line[i+1:]...)
 		}
 	}
 	return line
@@ -186,7 +186,7 @@ func checkWords(line []string, i int) [][]string {
 			newLine = append(newLine, []string{word, "Label"})
 		} else {
 			for _, character := range word {
-				if !(strings.Contains("0123456789", character)) {
+				if !(strings.Contains("0123456789", string(character))) {
 					err := "\rUnrecognized word \"" + word + "\" at line " + intToStr(i+1)
 					log.Fatal(err)
 				}
@@ -197,80 +197,30 @@ func checkWords(line []string, i int) [][]string {
 	return newLine
 }
 
-func checkSyntax(line [][]string, i int) {
-	switch line[0][0] {
-	case "HLT":
-	case "RET":
-	case "MOV":
-
-	case "ADD":
-		if line[1][1] != "Register" || line[2][1] != "Register" || !(strToInt(line[1][0]) > 15) || !(strToInt(line[1][0]) < 1) || strToInt(line[2][0]) > 15 || strToInt(line[2][0]) < 1 {
-			err := "Wrong type of argument for \"" + line[0][0] + "\" at line " + intToStr(i+1)
-			log.Fatal(err)
+func checkSyntax(line [][]string, rules []string, i int) {
+	var errorSyntax bool = false
+	for j, rule := range rules {
+		if rule == "Register" && (line[j+1][1] != "Register" || strToInt(line[j+1][0]) > 15 || strToInt(line[j+1][0]) < 0) {
+			errorSyntax = true
+		} else if rule == "Comparison" && (line[j+1][1] != "Comparison" || !(inList([]string{"G", "L", "E"}, line[j+1][0]))) {
+			errorSyntax = true
+		} else if rule == "Label" && (line[j+1][1] != "Label") {
+			errorSyntax = true
+		} else if rule == "Number" && (line[j+1][1] != "Number") {
+			errorSyntax = true
 		}
-	case "ADDI":
-		if line[1][1] != "Register" || line[2][1] != "Number" || !(strToInt(line[1][0]) > 15) || !(strToInt(line[1][0]) < 1) {
-			err := "Wrong type of argument for \"" + line[0][0] + "\" at line " + intToStr(i+1)
-			log.Fatal(err)
-		}
-	case "PUSH":
-		if line[1][1] != "Register" || !(strToInt(line[1][0]) > 15) || !(strToInt(line[1][0]) < 1) {
-			err := "Wrong type of argument for \"" + line[0][0] + "\" at line " + intToStr(i+1)
-			log.Fatal(err)
-		}
-	case "POP":
-		if line[1][1] != "Number" {
-			err := "Wrong type of argument for \"" + line[0][0] + "\" at line " + intToStr(i+1)
-			log.Fatal(err)
-		}
-	case "AND":
-		if line[1][1] != "Register" || line[2][1] != "Register" || !(strToInt(line[1][0]) > 15) || strToInt(line[2][0]) < 1 {
-			err := "Wrong type of argument for \"" + line[0][0] + "\" at line " + intToStr(i+1)
-			log.Fatal(err)
-		}
-	case "OR":
-		if line[1][1] != "Register" || line[2][1] != "Register" || !(strToInt(line[1][0]) > 15) || strToInt(line[2][0]) < 1 {
-			err := "Wrong type of argument for \"" + line[0][0] + "\" at line " + intToStr(i+1)
-			log.Fatal(err)
-		}
-	case "NOT":
-		if line[1][1] != "Register" || !(strToInt(line[1][0]) > 15) || strToInt(line[2][0]) < 1 {
-			err := "Wrong type of argument for \"" + line[0][0] + "\" at line " + intToStr(i+1)
-			log.Fatal(err)
-		}
-	case "SWAP":
-		var arg1 int = assemblerProgram[i][1]
-		var arg2 int = assemblerProgram[i][2]
-		intermediateVariable := registers[arg1]
-		registers[arg1] = registers[arg2]
-		registers[arg2] = intermediateVariable
-	case "CMP":
-		var arg1 int = assemblerProgram[i][1]
-		var arg2 int = assemblerProgram[i][2]
-		var arg3 int = assemblerProgram[i][3]
-		switch arg3 {
-		case 1:
-			if !(registers[arg1] < registers[arg2]) {
-				i += 1
-			}
-		case 2:
-			if !(registers[arg1] > registers[arg2]) {
-				i += 1
-			}
-		case 3:
-			if registers[arg1]^registers[arg2] != 0 {
-				i += 1
-			}
-		}
-	case "JMP":
-		i = assemblerProgram[i][1]
+	}
+	if errorSyntax {
+		err := "\rArgs don't respect syntax rule for \"" + line[0][0] + "\" at line " + intToStr(i+1)
+		log.Fatal(err)
 	}
 }
 
-func checkRules(line [][]string, rules []string, i int) {
-	for j, rule := range rules {
-		if rule == "Register" && (line[j+1][1]=="Register" || strToInt(line[j+1][0])<16 || strToInt(line[j+1][0])>0)
+func checkJumps(line [][]string, labels map[string]int) (map[string]int, [][]string) {
+	if string(line[0][0][len(line[0])-1]) == ":" {
+		labels[line[0][0][:len(line[0])-1]] = strToInt(operation[1]) - 1
 	}
+	return labels, assemblerProgram
 }
 
 func mnemonicsToOpcode(assemblerProgram [][]string) [][]int {
@@ -370,16 +320,6 @@ func createJumpAddress(assemblerProgram [][]string, labels map[string]int) [][]s
 		}
 	}
 	return assemblerProgram
-}
-
-func checkJumps(assemblerProgram [][]string) (map[string]int, [][]string) {
-	var labels = make(map[string]int)
-	for _, operation := range assemblerProgram {
-		if string(operation[0][len(operation[0])-1]) == ":" {
-			labels[string(operation[0][:len(operation[0])-1])] = strToInt(operation[1]) - 1
-		}
-	}
-	return labels, assemblerProgram
 }
 
 /////////////////////////
