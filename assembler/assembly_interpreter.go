@@ -220,7 +220,7 @@ func checkJumps(line [][]string, labels map[string]int) (map[string]int, [][]str
 	if string(line[0][0][len(line[0])-1]) == ":" {
 		labels[line[0][0][:len(line[0])-1]] = strToInt(operation[1]) - 1
 	}
-	return labels, assemblerProgram
+	return labels, line
 }
 
 func mnemonicsToOpcode(assemblerProgram [][]string) [][]int {
@@ -327,7 +327,6 @@ func createJumpAddress(assemblerProgram [][]string, labels map[string]int) [][]s
 /////////////////////////
 
 func executeProgram(assemblerProgram [][]int) {
-	var name string
 	for i := 0; i < len(assemblerProgram); i++ {
 		switch assemblerProgram[i][0] {
 		case HLT:
@@ -391,8 +390,7 @@ func executeProgram(assemblerProgram [][]int) {
 		case JMP:
 			i = assemblerProgram[i][1]
 		}
-		fmt.Println(i, assemblerProgram[i], registers, stack)
-		fmt.Scan(&name)
+		//fmt.Println(i, assemblerProgram[i], registers, stack)
 	}
 	fmt.Println(registers, stack)
 }
