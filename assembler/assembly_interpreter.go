@@ -54,21 +54,21 @@ var numberOfArgs = map[string]int{
 }
 
 var syntaxRules = map[string][]string{
-	"HLT":  []string{},
-	"RET":  []string{},
-	"AND":  []string{"Register", "Register"},
-	"OR":   []string{"Register", "Register"},
-	"NOT":  []string{"Register"},
-	"ADD":  []string{"Register", "Register"},
-	"ADDI": []string{"Register", "Number"},
-	"MOV":  []string{"Register", "Number"},
-	"PUSH": []string{"Register"},
-	"POP":  []string{"Register"},
-	"CMP":  []string{"Register", "Register", "Comparison"},
-	"JMP":  []string{"Label"},
-	"WRT":  []string{},
-	"READ": []string{},
-	"SWAP": []string{"Register", "Register"},
+	"HLT":  {},
+	"RET":  {},
+	"AND":  {"Register", "Register"},
+	"OR":   {"Register", "Register"},
+	"NOT":  {"Register"},
+	"ADD":  {"Register", "Register"},
+	"ADDI": {"Register", "Number"},
+	"MOV":  {"Register", "Number"},
+	"PUSH": {"Register"},
+	"POP":  {"Register"},
+	"CMP":  {"Register", "Register", "Comparison"},
+	"JMP":  {"Label"},
+	"WRT":  {},
+	"READ": {},
+	"SWAP": {"Register", "Register"},
 }
 
 //////////
@@ -77,7 +77,6 @@ var syntaxRules = map[string][]string{
 
 func main() {
 	args := os.Args[1:] // Skip the program name
-	fmt.Println(args)
 	content, err := os.ReadFile("assembler/program_test/" + args[0])
 	if err != nil {
 		log.Fatal("\rCouldn't read file")
@@ -93,7 +92,7 @@ func main() {
 	fmt.Printf("Temps : %s\n", elapsed)
 
 	startTime = time.Now()
-	executeProgram(opcodeProgram)
+	//executeProgram(opcodeProgram)
 	elapsed = time.Since(startTime)
 	fmt.Printf("Temps : %s\n", elapsed)
 }
@@ -116,40 +115,44 @@ func readProgram(program string) [][]string {
 ///////////////////////
 
 func programCleaner(assemblerProgram [][]string) [][]int {
-	var labels map[string]int
+	assemblerProgram = cleanEmptyOpe(assemblerProgram)
+	//var labels map[string]int
 	var tokenizedProgram [][][]string
+	var skippedLine = 0
 	for i, line := range assemblerProgram {
 		var skipOrNot bool = skipEmptyLine(line)
 		if !(skipOrNot) {
 			line = checkUnexpectedCharacter(line)
-			assemblerProgram[i] = delEmptyArgs(line)
 			checkNumberOfArgs(line, i)
 			tokenizedProgram = append(tokenizedProgram, checkWords(line, i))
-			checkSyntax(tokenizedProgram[i], syntaxRules[tokenizedProgram[i][0][0]], i)
-			tokenizedProgram, labels = checkJumps(line, labels)
+			//checkSyntax(tokenizedProgram[i], syntaxRules[tokenizedProgram[i][0][0]], i)
+			//labels = checkJumps(line, labels, i, skippedLine)
+			fmt.Println(line, tokenizedProgram[i])
+		} else {
+			skippedLine += 1
 		}
 	}
 
 	// Jumps
-	assemblerProgram = createJumpAddress(assemblerProgram, labels)
-	fmt.Println((assemblerProgram))
+	//assemblerProgram = createJumpAddress(assemblerProgram, labels)
 	//var opcodeProgram [][]int = mnemonicsToOpcode(assemblerProgram)
-
+	var opcodeProgram [][]int
 	return opcodeProgram
+}
+
+func cleanEmptyOpe(assemblerProgram [][]string) [][]string {
+	for i, line := range assemblerProgram {
+		for j, ope := range line {
+			if ope == "" || ope == " " {
+				assemblerProgram[i] = append(assemblerProgram[i][:j], assemblerProgram[i][j+1:]...)
+			}
+		}
+	}
+	return assemblerProgram
 }
 
 func skipEmptyLine(line []string) bool {
 	return len(line) == 0
-}
-
-// check change of account
-func delEmptyArgs(line []string) []string {
-	for i := range line {
-		if len(line[i]) == 0 {
-			line = append(line[:i], line[i+1:]...)
-		}
-	}
-	return line
 }
 
 func checkUnexpectedCharacter(line []string) []string {
@@ -176,6 +179,7 @@ func checkNumberOfArgs(line []string, i int) {
 func checkWords(line []string, i int) [][]string {
 	var newLine [][]string
 	for _, word := range line {
+		fmt.Println(word[1:])
 		if inList(mnemonics, word) {
 			newLine = append(newLine, []string{word, "Operation"})
 		} else if strToInt(word[1:]) < 16 && strToInt(word[1:]) >= 0 && inList([]string{"r", "R"}, string(word[0])) {
@@ -216,11 +220,11 @@ func checkSyntax(line [][]string, rules []string, i int) {
 	}
 }
 
-func checkJumps(line [][]string, labels map[string]int) (map[string]int, [][]string) {
-	if string(line[0][0][len(line[0])-1]) == ":" {
-		labels[line[0][0][:len(line[0])-1]] = strToInt(operation[1]) - 1
+func checkJumps(line []string, labels map[string]int, i int, skippedLine int) map[string]int {
+	if string(line[0][len(line[0])-1]) == ":" {
+		labels[line[0][:len(line[0])-1]] = i - skippedLine
 	}
-	return labels, line
+	return labels
 }
 
 func mnemonicsToOpcode(assemblerProgram [][]string) [][]int {
