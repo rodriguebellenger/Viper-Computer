@@ -103,10 +103,12 @@ func main() {
 
 func readProgram(program string) [][]string {
 	var operations []string = strings.Split(program, "\n")
-	var assemblerProgram [][]string = [][]string{}
-	for i := range len(operations) {
-		assemblerProgram = append(assemblerProgram, strings.Split(operations[i], " "))
+	var assemblerProgram [][]string
+
+	for _, line := range operations {
+		assemblerProgram = append(assemblerProgram, strings.Fields(line))
 	}
+
 	return assemblerProgram
 }
 
@@ -127,7 +129,7 @@ func programCleaner(assemblerProgram [][]string) [][]int {
 			tokenizedProgram = append(tokenizedProgram, checkWords(line, i))
 			//checkSyntax(tokenizedProgram[i], syntaxRules[tokenizedProgram[i][0][0]], i)
 			//labels = checkJumps(line, labels, i, skippedLine)
-			fmt.Println(line, tokenizedProgram[i])
+			fmt.Println(line, tokenizedProgram[i-skippedLine])
 		} else {
 			skippedLine += 1
 		}
@@ -171,27 +173,26 @@ func checkUnexpectedCharacter(line []string) []string {
 
 func checkNumberOfArgs(line []string, i int) {
 	if numberOfArgs[line[0]] != len(line)-1 {
-		err := "\rWrong number of args for \"" + line[0] + "\" at line " + intToStr(i+1)
+		err := "Wrong number of args for \"" + line[0] + "\" at line " + intToStr(i+1)
 		log.Fatal(err)
 	}
 }
 
 func checkWords(line []string, i int) [][]string {
 	var newLine [][]string
-	for _, word := range line {
-		fmt.Println(word[1:])
+	for j, word := range line {
 		if inList(mnemonics, word) {
 			newLine = append(newLine, []string{word, "Operation"})
-		} else if strToInt(word[1:]) < 16 && strToInt(word[1:]) >= 0 && inList([]string{"r", "R"}, string(word[0])) {
-			newLine = append(newLine, []string{word[1:], "Register"})
 		} else if inList([]string{"G", "L", "E"}, word) {
 			newLine = append(newLine, []string{word, "Comparison"})
-		} else if word[len(word)-1] == ':' {
+		} else if word[len(word)-1] == ':' || (j > 0 && line[j-1] == "JMP") {
 			newLine = append(newLine, []string{word, "Label"})
+		} else if len(word[1:]) > 0 && strToInt(word[1:]) < 16 && strToInt(word[1:]) >= 0 && inList([]string{"r", "R"}, string(word[0])) {
+			newLine = append(newLine, []string{word[1:], "Register"})
 		} else {
 			for _, character := range word {
-				if !(strings.Contains("0123456789", string(character))) {
-					err := "\rUnrecognized word \"" + word + "\" at line " + intToStr(i+1)
+				if !(strings.Contains("-0123456789", string(character))) {
+					err := "Unrecognized word \"" + word + "\" at line " + intToStr(i+1)
 					log.Fatal(err)
 				}
 			}
@@ -215,7 +216,7 @@ func checkSyntax(line [][]string, rules []string, i int) {
 		}
 	}
 	if errorSyntax {
-		err := "\rArgs don't respect syntax rule for \"" + line[0][0] + "\" at line " + intToStr(i+1)
+		err := "Args don't respect syntax rule for \"" + line[0][0] + "\" at line " + intToStr(i+1)
 		log.Fatal(err)
 	}
 }
@@ -317,7 +318,7 @@ func createJumpAddress(assemblerProgram [][]string, labels map[string]int) [][]s
 		if operation[0] == "JMP" {
 			var targetLine int = labels[operation[1]]
 			if targetLine == 0 {
-				err := "\rUndefined label \"" + operation[1] + "\" at line " + operation[2]
+				err := "Undefined label \"" + operation[1] + "\" at line " + operation[2]
 				log.Fatal(err)
 			}
 			operation[1] = intToStr(targetLine)
@@ -406,7 +407,7 @@ func executeProgram(assemblerProgram [][]int) {
 func strToInt(x string) int {
 	num, err := strconv.Atoi(x)
 	if err != nil {
-		log.Fatal("\rError in strToInt")
+		log.Fatal("Error in strToInt")
 	}
 	return num
 }
