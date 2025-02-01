@@ -1,4 +1,4 @@
-MOV Rer, 0
+MOV R15, 0
 MOV R1, 100
 
 Loop:

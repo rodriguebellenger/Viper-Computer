@@ -71,6 +71,9 @@ var syntaxRules = map[string][]string{
 	"SWAP": {"Register", "Register"},
 }
 
+var forbiddenLabels []string = []string{"R0", "R1", "R2", "R3", "R4", "R5", "R6", "R7", "R8", "R9", "R10", "R11", "R12", "R13", "R14", "R15",
+	"r0", "r1", "r2", "r3", "r4", "r5", "r6", "r7", "r8", "r9", "r10", "r11", "r12", "r13", "r14", "r15"}
+
 //////////
 // MAIN //
 //////////
@@ -118,7 +121,7 @@ func readProgram(program string) [][]string {
 
 func programCleaner(assemblerProgram [][]string) [][]int {
 	assemblerProgram = cleanEmptyOpe(assemblerProgram)
-	//var labels map[string]int
+	var labels = make(map[string]int)
 	var tokenizedProgram [][][]string
 	var skippedLine = 0
 	for i, line := range assemblerProgram {
@@ -127,18 +130,23 @@ func programCleaner(assemblerProgram [][]string) [][]int {
 			line = checkUnexpectedCharacter(line)
 			checkNumberOfArgs(line, i)
 			tokenizedProgram = append(tokenizedProgram, checkWords(line, i))
-			//checkSyntax(tokenizedProgram[i], syntaxRules[tokenizedProgram[i][0][0]], i)
-			//labels = checkJumps(line, labels, i, skippedLine)
-			fmt.Println(line, tokenizedProgram[i-skippedLine])
+			checkSyntax(tokenizedProgram[i-skippedLine], syntaxRules[tokenizedProgram[i-skippedLine][0][0]], i)
+			labels = checkJumps(line, labels, i, skippedLine)
 		} else {
 			skippedLine += 1
 		}
 	}
 
-	// Jumps
-	//assemblerProgram = createJumpAddress(assemblerProgram, labels)
-	//var opcodeProgram [][]int = mnemonicsToOpcode(assemblerProgram)
 	var opcodeProgram [][]int
+	for i, line := range tokenizedProgram {
+		if line[0][0] == "JMP" {
+			tokenizedProgram[i] = createJumpAddress(labels, line, i)
+			//tokenizedProgram = append(tokenizedProgram[:i], tokenizedProgram[i+1:]...)
+		}
+		fmt.Println(tokenizedProgram[i])
+		opcodeProgram = append(opcodeProgram, mnemonicsToOpcode(line))
+		fmt.Println(opcodeProgram[i])
+	}
 	return opcodeProgram
 }
 
@@ -223,108 +231,100 @@ func checkSyntax(line [][]string, rules []string, i int) {
 
 func checkJumps(line []string, labels map[string]int, i int, skippedLine int) map[string]int {
 	if string(line[0][len(line[0])-1]) == ":" {
-		labels[line[0][:len(line[0])-1]] = i - skippedLine
+		if !inList(forbiddenLabels, string(line[0][:len(line[0])-1])) {
+			labels[string(line[0][:len(line[0])-1])] = i - skippedLine
+		} else {
+			err := "Forbiddent label name \"" + string(line[0][:len(line[0])-1]) + "\" at line " + intToStr(i)
+			log.Fatal(err)
+		}
 	}
 	return labels
 }
 
-func mnemonicsToOpcode(assemblerProgram [][]string) [][]int {
-	var opcodeProgram [][]int
-	var newLine []int
-	var load int = 0
-	for _, line := range assemblerProgram {
-		if line[0] == "MOV" {
-			var arg1 int = strToInt(line[1][1:])
-			var arg2 int = strToInt(line[2])
-			newLine = []int{MOV, arg1, arg2}
-
-		} else if line[0] == "ADD" {
-			var arg1 int = strToInt(line[1][1:])
-			var arg2 int = strToInt(line[2][1:])
-			newLine = []int{ADD, arg1, arg2}
-
-		} else if line[0] == "ADDI" {
-			var arg1 int = strToInt(line[1][1:])
-			var arg2 int = strToInt(line[2])
-			newLine = []int{ADDI, arg1, arg2}
-
-		} else if line[0] == "PUSH" {
-			var arg1 int = strToInt(line[1][1:])
-			newLine = []int{PUSH, arg1}
-
-		} else if line[0] == "POP" {
-			var arg1 int = strToInt(line[1][1:])
-			newLine = []int{POP, arg1}
-
-		} else if line[0] == "AND" {
-			var arg1 int = strToInt(line[1][1:])
-			var arg2 int = strToInt(line[2][1:])
-			newLine = []int{AND, arg1, arg2}
-
-		} else if line[0] == "OR" {
-			var arg1 int = strToInt(line[1][1:])
-			var arg2 int = strToInt(line[2][1:])
-			newLine = []int{OR, arg1, arg2}
-
-		} else if line[0] == "NOT" {
-			var arg1 int = strToInt(line[1][1:])
-			newLine = []int{NOT, arg1}
-
-		} else if line[0] == "SWAP" {
-			var arg1 int = strToInt(line[1][1:])
-			var arg2 int = strToInt(line[2][1:])
-			newLine = []int{SWAP, arg1, arg2}
-
-		} else if line[0] == "CMP" {
-			var arg1 int = strToInt(line[1][1:])
-			var arg2 int = strToInt(line[2][1:])
-			var arg3 string = line[3]
-			if inList([]string{"L", "G", "E"}, arg3) {
-				if arg3 == "L" {
-					newLine = []int{CMP, arg1, arg2, 1}
-				} else if arg3 == "G" {
-					newLine = []int{CMP, arg1, arg2, 2}
-				} else if arg3 == "E" {
-					newLine = []int{CMP, arg1, arg2, 3}
-				}
-			} else {
-				err := "Unrecognized comparison character \"" + arg3 + "\" at line " + line[4]
-				log.Fatal(err)
-			}
-		} else if line[0] == "JMP" {
-			var arg1 int = strToInt(line[1])
-			newLine = []int{JMP, arg1}
-		} else if line[0] == "RET" {
-			newLine = []int{RET}
-		} else if string(line[0][len(line[0])-1]) == ":" {
-			load = 1
-		} else if line[0] == "HLT" {
-			newLine = []int{HLT}
-		} else {
-			log.Fatal("Err in mnemonicsToOpcode : " + line[0])
-		}
-		switch load {
-		case 0:
-			opcodeProgram = append(opcodeProgram, newLine)
-		case 1:
-			load = 0
-		}
+func createJumpAddress(labels map[string]int, line [][]string, i int) [][]string {
+	var targetLine int = labels[line[1][0]]
+	if targetLine == 0 {
+		err := "Undefined label \"" + line[1][0] + "\""
+		log.Fatal(err)
 	}
-	return opcodeProgram
+	line[1][0] = intToStr(targetLine - i)
+	return line
 }
 
-func createJumpAddress(assemblerProgram [][]string, labels map[string]int) [][]string {
-	for _, operation := range assemblerProgram {
-		if operation[0] == "JMP" {
-			var targetLine int = labels[operation[1]]
-			if targetLine == 0 {
-				err := "Undefined label \"" + operation[1] + "\" at line " + operation[2]
-				log.Fatal(err)
+func mnemonicsToOpcode(line [][]string) []int {
+	var newLine []int
+	//fmt.Println(line[1][0])
+	if string(line[0][0]) == "MOV" {
+		var arg1 int = strToInt(line[1][0])
+		var arg2 int = strToInt(line[2][0])
+		newLine = []int{MOV, arg1, arg2}
+
+	} else if string(line[0][0]) == "ADD" {
+		var arg1 int = strToInt(line[1][0])
+		var arg2 int = strToInt(line[2][0])
+		newLine = []int{ADD, arg1, arg2}
+
+	} else if string(line[0][0]) == "ADDI" {
+		var arg1 int = strToInt(line[1][0])
+		var arg2 int = strToInt(line[2][0])
+		newLine = []int{ADDI, arg1, arg2}
+
+	} else if string(line[0][0]) == "PUSH" {
+		var arg1 int = strToInt(line[1][0])
+		newLine = []int{PUSH, arg1}
+
+	} else if string(line[0][0]) == "POP" {
+		var arg1 int = strToInt(line[1][0])
+		newLine = []int{POP, arg1}
+
+	} else if string(line[0][0]) == "AND" {
+		var arg1 int = strToInt(line[1][0])
+		var arg2 int = strToInt(line[2][0])
+		newLine = []int{AND, arg1, arg2}
+
+	} else if string(line[0][0]) == "OR" {
+		var arg1 int = strToInt(line[1][0])
+		var arg2 int = strToInt(line[2][0])
+		newLine = []int{OR, arg1, arg2}
+
+	} else if string(line[0][0]) == "NOT" {
+		var arg1 int = strToInt(line[1][0])
+		newLine = []int{NOT, arg1}
+
+	} else if string(line[0][0]) == "SWAP" {
+		var arg1 int = strToInt(line[1][0])
+		var arg2 int = strToInt(line[2][0])
+		newLine = []int{SWAP, arg1, arg2}
+
+	} else if string(line[0][0]) == "CMP" {
+		var arg1 int = strToInt(line[1][0])
+		var arg2 int = strToInt(line[2][0])
+		var arg3 string = line[3][0]
+		if inList([]string{"L", "G", "E"}, arg3) {
+			if arg3 == "L" {
+				newLine = []int{CMP, arg1, arg2, 1}
+			} else if arg3 == "G" {
+				newLine = []int{CMP, arg1, arg2, 2}
+			} else if arg3 == "E" {
+				newLine = []int{CMP, arg1, arg2, 3}
 			}
-			operation[1] = intToStr(targetLine)
+		} else {
+			err := "Unrecognized comparison character \"" + arg3 + "\""
+			log.Fatal(err)
 		}
+	} else if string(line[0][0]) == "JMP" {
+		var arg1 int = strToInt(line[1][0])
+		newLine = []int{JMP, arg1}
+	} else if string(line[0][0]) == "RET" {
+		newLine = []int{RET}
+	} else if string(line[0][len(line[0])-1]) == ":" {
+
+	} else if string(line[0][0]) == "HLT" {
+		newLine = []int{HLT}
+	} else {
+		log.Fatal("Err in mnemonicsToOpcode : " + string(line[0][0]))
 	}
-	return assemblerProgram
+	return newLine
 }
 
 /////////////////////////
@@ -407,7 +407,8 @@ func executeProgram(assemblerProgram [][]int) {
 func strToInt(x string) int {
 	num, err := strconv.Atoi(x)
 	if err != nil {
-		log.Fatal("Error in strToInt")
+		fmt.Println("Error in strToInt : " + x)
+		return -1
 	}
 	return num
 }
