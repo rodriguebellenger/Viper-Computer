@@ -72,7 +72,9 @@ var syntaxRules = map[string][]string{
 }
 
 var forbiddenLabels []string = []string{"R0", "R1", "R2", "R3", "R4", "R5", "R6", "R7", "R8", "R9", "R10", "R11", "R12", "R13", "R14", "R15",
-	"r0", "r1", "r2", "r3", "r4", "r5", "r6", "r7", "r8", "r9", "r10", "r11", "r12", "r13", "r14", "r15"}
+	"r0", "r1", "r2", "r3", "r4", "r5", "r6", "r7", "r8", "r9", "r10", "r11", "r12", "r13", "r14", "r15",
+	"HLT", "RET", "AND", "OR", "NOT", "ADD", "ADDI", "MOV", "PUSH", "POP", "CMP", "JMP", "WRT", "READ", "SWAP",
+	"E", "G", "L"}
 
 //////////
 // MAIN //
@@ -95,7 +97,7 @@ func main() {
 	fmt.Printf("Temps : %s\n", elapsed)
 
 	startTime = time.Now()
-	//executeProgram(opcodeProgram)
+	executeProgram(opcodeProgram)
 	elapsed = time.Since(startTime)
 	fmt.Printf("Temps : %s\n", elapsed)
 }
@@ -138,14 +140,18 @@ func programCleaner(assemblerProgram [][]string) [][]int {
 	}
 
 	var opcodeProgram [][]int
+	var finishedLine []int
+	skippedLine = 0
 	for i, line := range tokenizedProgram {
 		if line[0][0] == "JMP" {
 			tokenizedProgram[i] = createJumpAddress(labels, line, i)
-			//tokenizedProgram = append(tokenizedProgram[:i], tokenizedProgram[i+1:]...)
 		}
-		fmt.Println(tokenizedProgram[i])
-		opcodeProgram = append(opcodeProgram, mnemonicsToOpcode(line))
-		fmt.Println(opcodeProgram[i])
+		finishedLine = mnemonicsToOpcode(line)
+		if len(finishedLine) != 0 {
+			opcodeProgram = append(opcodeProgram, finishedLine)
+		} else {
+			skippedLine += 1
+		}
 	}
 	return opcodeProgram
 }
@@ -321,6 +327,8 @@ func mnemonicsToOpcode(line [][]string) []int {
 
 	} else if string(line[0][0]) == "HLT" {
 		newLine = []int{HLT}
+	} else if string(line[0][0][len(line[0][0])-1]) == ":" {
+		newLine = []int{}
 	} else {
 		log.Fatal("Err in mnemonicsToOpcode : " + string(line[0][0]))
 	}
@@ -393,7 +401,11 @@ func executeProgram(assemblerProgram [][]int) {
 				}
 			}
 		case JMP:
-			i = assemblerProgram[i][1]
+			if assemblerProgram[i][1] > 0 {
+				i = i + assemblerProgram[i][1] - 1
+			} else {
+				i = i + assemblerProgram[i][1]
+			}
 		}
 		//fmt.Println(i, assemblerProgram[i], registers, stack)
 	}

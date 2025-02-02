@@ -1,12 +1,3 @@
-MOV R15 0
-MOV R1 3
-
-LoopPast:
-ADDI R1 -1
-CMP R1 R0 G
-JMP LoopPast
-
-CMP R1 R0 E
 JMP FutureLoopInit
 
 MOV R1 2
