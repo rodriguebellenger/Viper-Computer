@@ -14,6 +14,7 @@ import (
 //////////
 
 var mnemonics []string = []string{"MOV", "ADDI", "ADD", "AND", "OR", "NOT", "PUSH", "POP", "SWAP", "CMP", "JMP", "RET", "HLT"}
+var registersName []string = []string{"R0", "R1", "R2", "R3", "R4", "R5", "R6", "R7", "R8", "R9", "R10", "R11", "R12", "R13", "R14", "R15"}
 var registers []int = []int{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 var stack []int = []int{}
 
@@ -34,24 +35,6 @@ const (
 	READ
 	SWAP
 )
-
-var numberOfArgs = map[string]int{
-	"HLT":  0,
-	"RET":  0,
-	"AND":  2,
-	"OR":   2,
-	"NOT":  1,
-	"ADD":  2,
-	"ADDI": 2,
-	"MOV":  2,
-	"PUSH": 1,
-	"POP":  1,
-	"CMP":  3,
-	"JMP":  1,
-	"WRT":  0,
-	"READ": 0,
-	"SWAP": 2,
-}
 
 var syntaxRules = map[string][]string{
 	"HLT":  {},
@@ -97,7 +80,7 @@ func main() {
 	fmt.Printf("Temps : %s\n", elapsed)
 
 	startTime = time.Now()
-	executeProgram(opcodeProgram)
+	//executeProgram(opcodeProgram)
 	elapsed = time.Since(startTime)
 	fmt.Printf("Temps : %s\n", elapsed)
 }
@@ -122,27 +105,23 @@ func readProgram(program string) [][]string {
 ///////////////////////
 
 func programCleaner(assemblerProgram [][]string) [][]int {
+	// Deletion of everything that is empty
 	assemblerProgram = cleanEmpty(assemblerProgram)
-	fmt.Println(assemblerProgram)
+
 	var labels = make(map[string]int)
 	var tokenizedProgram [][][]string
-	var skippedLine = 0
+
+	fmt.Println(assemblerProgram)
 	for i, line := range assemblerProgram {
-		var skipOrNot bool = skipEmptyLine(line)
-		if !(skipOrNot) {
-			line = checkUnexpectedCharacter(line)
-			checkNumberOfArgs(line, i)
-			tokenizedProgram = append(tokenizedProgram, checkWords(line, i))
-			checkSyntax(tokenizedProgram[i-skippedLine], syntaxRules[tokenizedProgram[i-skippedLine][0][0]], i)
-			labels = checkJumps(tokenizedProgram[i-skippedLine], labels, i)
-		} else {
-			skippedLine += 1
-		}
+		line = checkUnexpectedCharacter(line)
+		checkNumberOfArgs(line, i)
+		tokenizedProgram = append(tokenizedProgram, checkWords(line, i))
+		checkSyntax(tokenizedProgram[i], syntaxRules[tokenizedProgram[i][0][0]], i)
+		labels = checkJumps(tokenizedProgram[i], labels, i)
 	}
 
 	var opcodeProgram [][]int
 	var finishedLine []int
-	skippedLine = 0
 	for i, line := range tokenizedProgram {
 		if line[0][0] == "JMP" {
 			tokenizedProgram[i] = createJumpAddress(labels, line, i)
@@ -150,8 +129,6 @@ func programCleaner(assemblerProgram [][]string) [][]int {
 		finishedLine = mnemonicsToOpcode(line)
 		if len(finishedLine) != 0 {
 			opcodeProgram = append(opcodeProgram, finishedLine)
-		} else {
-			skippedLine += 1
 		}
 	}
 	return opcodeProgram
@@ -192,7 +169,8 @@ func checkUnexpectedCharacter(line []string) []string {
 }
 
 func checkNumberOfArgs(line []string, i int) {
-	if numberOfArgs[line[0]] != len(line)-1 {
+	fmt.Println(line)
+	if len(syntaxRules[line[0]]) != len(line)-1 {
 		err := "Wrong number of args for \"" + line[0] + "\" at line " + intToStr(i+1)
 		log.Fatal(err)
 	}
@@ -207,7 +185,7 @@ func checkWords(line []string, i int) [][]string {
 			newLine = append(newLine, []string{word, "Comparison"})
 		} else if word[len(word)-1] == ':' || (j > 0 && line[j-1] == "JMP") {
 			newLine = append(newLine, []string{word, "Label"})
-		} else if len(word[1:]) > 0 && strToInt(word[1:]) < 16 && strToInt(word[1:]) >= 0 && inList([]string{"r", "R"}, string(word[0])) {
+		} else if inList(registersName, word) {
 			newLine = append(newLine, []string{word[1:], "Register"})
 		} else {
 			for _, character := range word {
@@ -225,13 +203,13 @@ func checkWords(line []string, i int) [][]string {
 func checkSyntax(line [][]string, rules []string, i int) {
 	var errorSyntax bool = false
 	for j, rule := range rules {
-		if rule == "Register" && (line[j+1][1] != "Register" || strToInt(line[j+1][0]) > 15 || strToInt(line[j+1][0]) < 0) {
+		if rule == "Register" && line[j+1][1] != "Register" {
 			errorSyntax = true
-		} else if rule == "Comparison" && (line[j+1][1] != "Comparison" || !(inList([]string{"G", "L", "E"}, line[j+1][0]))) {
+		} else if rule == "Comparison" && line[j+1][1] != "Comparison" {
 			errorSyntax = true
-		} else if rule == "Label" && (line[j+1][1] != "Label") {
+		} else if rule == "Label" && line[j+1][1] != "Label" {
 			errorSyntax = true
-		} else if rule == "Number" && (line[j+1][1] != "Number") {
+		} else if rule == "Number" && line[j+1][1] != "Number" {
 			errorSyntax = true
 		}
 	}
@@ -242,9 +220,9 @@ func checkSyntax(line [][]string, rules []string, i int) {
 }
 
 func checkJumps(line [][]string, labels map[string]int, i int) map[string]int {
-	if string(line[0][len(line[0])-1]) == ":" {
+	if string(line[0][0][len(line[0][0])-1]) == ":" {
 		if !inList(forbiddenLabels, string(line[0][0][:len(line[0][0])-1])) {
-			labels[string(line[0][0][:len(line[0])-1])] = i
+			labels[string(line[0][0][:len(line[0][0])-1])] = i
 		} else {
 			err := "Forbiddent label name \"" + string(line[0][0][:len(line[0])-1]) + "\" at line " + intToStr(i)
 			log.Fatal(err)
@@ -265,7 +243,6 @@ func createJumpAddress(labels map[string]int, line [][]string, i int) [][]string
 
 func mnemonicsToOpcode(line [][]string) []int {
 	var newLine []int
-	//fmt.Println(line[1][0])
 	if string(line[0][0]) == "MOV" {
 		var arg1 int = strToInt(line[1][0])
 		var arg2 int = strToInt(line[2][0])
@@ -320,17 +297,12 @@ func mnemonicsToOpcode(line [][]string) []int {
 			} else if arg3 == "E" {
 				newLine = []int{CMP, arg1, arg2, 3}
 			}
-		} else {
-			err := "Unrecognized comparison character \"" + arg3 + "\""
-			log.Fatal(err)
 		}
 	} else if string(line[0][0]) == "JMP" {
 		var arg1 int = strToInt(line[1][0])
 		newLine = []int{JMP, arg1}
 	} else if string(line[0][0]) == "RET" {
 		newLine = []int{RET}
-	} else if string(line[0][len(line[0])-1]) == ":" {
-
 	} else if string(line[0][0]) == "HLT" {
 		newLine = []int{HLT}
 	} else if string(line[0][0][len(line[0][0])-1]) == ":" {

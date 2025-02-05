@@ -1,6 +1,6 @@
-MOV R15, 0
-MOV R1, 10
-
+MOV R15,      0
+MOV R1,      10
+     
 Loop:
 ADDI R1, -1
 CMP R1, R0 G
