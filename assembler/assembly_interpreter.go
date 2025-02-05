@@ -13,8 +13,6 @@ import (
 // DATA //
 //////////
 
-// Start of memory branch
-
 var mnemonics []string = []string{"MOV", "ADDI", "ADD", "AND", "OR", "NOT", "PUSH", "POP", "SWAP", "CMP", "JMP", "RET", "HLT"}
 var registers []int = []int{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 var stack []int = []int{}
@@ -124,7 +122,8 @@ func readProgram(program string) [][]string {
 ///////////////////////
 
 func programCleaner(assemblerProgram [][]string) [][]int {
-	assemblerProgram = cleanEmptyOpe(assemblerProgram)
+	assemblerProgram = cleanEmpty(assemblerProgram)
+	fmt.Println(assemblerProgram)
 	var labels = make(map[string]int)
 	var tokenizedProgram [][][]string
 	var skippedLine = 0
@@ -135,7 +134,7 @@ func programCleaner(assemblerProgram [][]string) [][]int {
 			checkNumberOfArgs(line, i)
 			tokenizedProgram = append(tokenizedProgram, checkWords(line, i))
 			checkSyntax(tokenizedProgram[i-skippedLine], syntaxRules[tokenizedProgram[i-skippedLine][0][0]], i)
-			labels = checkJumps(line, labels, i, skippedLine)
+			labels = checkJumps(tokenizedProgram[i-skippedLine], labels, i)
 		} else {
 			skippedLine += 1
 		}
@@ -158,12 +157,17 @@ func programCleaner(assemblerProgram [][]string) [][]int {
 	return opcodeProgram
 }
 
-func cleanEmptyOpe(assemblerProgram [][]string) [][]string {
+func cleanEmpty(assemblerProgram [][]string) [][]string {
+	var skippedLine int = 0
 	for i, line := range assemblerProgram {
 		for j, ope := range line {
 			if ope == "" || ope == " " {
 				assemblerProgram[i] = append(assemblerProgram[i][:j], assemblerProgram[i][j+1:]...)
 			}
+		}
+		if len(line) == 0 {
+			assemblerProgram = append(assemblerProgram[:i-skippedLine], assemblerProgram[i+1-skippedLine:]...)
+			skippedLine += 1
 		}
 	}
 	return assemblerProgram
@@ -237,12 +241,12 @@ func checkSyntax(line [][]string, rules []string, i int) {
 	}
 }
 
-func checkJumps(line []string, labels map[string]int, i int, skippedLine int) map[string]int {
+func checkJumps(line [][]string, labels map[string]int, i int) map[string]int {
 	if string(line[0][len(line[0])-1]) == ":" {
-		if !inList(forbiddenLabels, string(line[0][:len(line[0])-1])) {
-			labels[string(line[0][:len(line[0])-1])] = i - skippedLine
+		if !inList(forbiddenLabels, string(line[0][0][:len(line[0][0])-1])) {
+			labels[string(line[0][0][:len(line[0])-1])] = i
 		} else {
-			err := "Forbiddent label name \"" + string(line[0][:len(line[0])-1]) + "\" at line " + intToStr(i)
+			err := "Forbiddent label name \"" + string(line[0][0][:len(line[0])-1]) + "\" at line " + intToStr(i)
 			log.Fatal(err)
 		}
 	}
@@ -398,7 +402,7 @@ func executeProgram(assemblerProgram [][]int) {
 					i += 1
 				}
 			case 3:
-				if registers[arg1]^registers[arg2] != 0 {
+				if registers[arg1] != registers[arg2] {
 					i += 1
 				}
 			}
@@ -409,7 +413,7 @@ func executeProgram(assemblerProgram [][]int) {
 				i = i + assemblerProgram[i][1]
 			}
 		}
-		//fmt.Println(i, assemblerProgram[i], registers, stack)
+		fmt.Println(i, assemblerProgram[i], registers, stack)
 	}
 	fmt.Println(registers, stack)
 }

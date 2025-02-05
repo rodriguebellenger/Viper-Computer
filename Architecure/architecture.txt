@@ -35,6 +35,9 @@ r14 : free register, can be changed
 r15 : 
 pp (program pointer) : remember the current address instruction, can be modified by JMP, CALL and RET
 
+The first 16 memory address in the RAM are the registers, whatever you put in an operation like "MOV", 
+it is considered to be a memory address, and R0 through R15 are just special way to access special addresses
+
 Assembler : 
 File : 
 .data
