@@ -1,3 +1,4 @@
+MOV R1 1
 JMP Future
   
 MOV R1 2
@@ -6,6 +7,15 @@ MOV R3 2
 MOV R4 2
   
 Future:
-MOV R1 3
+CMP R1 R0 G
+JMP Future2
+
+MOV R5 2
+MOV R6 2
+MOV R7 2
+MOV R8 2
+
+Future2:
+MOV R1 15
    
 HLT

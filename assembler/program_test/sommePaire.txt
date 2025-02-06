@@ -1,4 +1,4 @@
-MOV R1 4
+MOV R1 5
 MOV R4 1
 PUSH R1
 POP R3
@@ -12,7 +12,6 @@ ADDI R3 -2
 JMP PaireOuImpaire
 
 Impaire:
-MOV R15 255
 ADDI R1 -1
 
 SommePaire:
