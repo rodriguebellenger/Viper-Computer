@@ -80,7 +80,7 @@ func main() {
 	fmt.Printf("Temps : %s\n", elapsed)
 
 	startTime = time.Now()
-	//executeProgram(opcodeProgram)
+	executeProgram(opcodeProgram)
 	elapsed = time.Since(startTime)
 	fmt.Printf("Temps : %s\n", elapsed)
 }
@@ -111,7 +111,6 @@ func programCleaner(assemblerProgram [][]string) [][]int {
 	var labels = make(map[string]int)
 	var tokenizedProgram [][][]string
 
-	fmt.Println(assemblerProgram)
 	for i, line := range assemblerProgram {
 		line = checkUnexpectedCharacter(line)
 		checkNumberOfArgs(line, i)
@@ -135,19 +134,19 @@ func programCleaner(assemblerProgram [][]string) [][]int {
 }
 
 func cleanEmpty(assemblerProgram [][]string) [][]string {
-	var skippedLine int = 0
-	for i, line := range assemblerProgram {
-		for j, ope := range line {
-			if ope == "" || ope == " " {
-				assemblerProgram[i] = append(assemblerProgram[i][:j], assemblerProgram[i][j+1:]...)
+	var cleanedProgram [][]string
+	for _, line := range assemblerProgram {
+		var cleanedLine []string
+		for _, word := range line {
+			if len(word) != 0 {
+				cleanedLine = append(cleanedLine, word)
 			}
 		}
-		if len(line) == 0 {
-			assemblerProgram = append(assemblerProgram[:i-skippedLine], assemblerProgram[i+1-skippedLine:]...)
-			skippedLine += 1
+		if len(cleanedLine) != 0 {
+			cleanedProgram = append(cleanedProgram, cleanedLine)
 		}
 	}
-	return assemblerProgram
+	return cleanedProgram
 }
 
 func skipEmptyLine(line []string) bool {
@@ -169,7 +168,6 @@ func checkUnexpectedCharacter(line []string) []string {
 }
 
 func checkNumberOfArgs(line []string, i int) {
-	fmt.Println(line)
 	if len(syntaxRules[line[0]]) != len(line)-1 {
 		err := "Wrong number of args for \"" + line[0] + "\" at line " + intToStr(i+1)
 		log.Fatal(err)

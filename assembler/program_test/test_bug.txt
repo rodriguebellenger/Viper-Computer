@@ -1,11 +1,11 @@
-JMP FutureLoop
-
+JMP Future
+  
 MOV R1 2
 MOV R2 2
 MOV R3 2
 MOV R4 2
-
-FutureLoop:
+  
+Future:
 MOV R1 3
-
+   
 HLT
