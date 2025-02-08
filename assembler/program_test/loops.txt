@@ -1,7 +1,7 @@
-MOV R15    0
-MOV R1    10
+MOV R15 0
+MOV R1 1000000000
      
 Loop:
-ADDI    R1 -1
+ADDI R1 -1
 CMP R1 R0 G
 JMP Loop

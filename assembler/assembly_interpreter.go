@@ -9,6 +9,8 @@ import (
 	"time"
 )
 
+var debug bool = false
+
 //////////
 // DATA //
 //////////
@@ -69,6 +71,9 @@ func main() {
 	if err != nil {
 		log.Fatal("\rCouldn't read file")
 	}
+	if len(args) > 1 && args[1] == "debug" {
+		debug = true
+	}
 
 	var program string = string(content)
 	var assemblerProgram [][]string = readProgram(program)
@@ -119,16 +124,14 @@ func programCleaner(assemblerProgram [][]string) [][]int {
 		labels = checkJumps(tokenizedProgram[i], labels, i)
 	}
 
+	tokenizedProgram = delLabels(tokenizedProgram)
+
 	var opcodeProgram [][]int
-	var finishedLine []int
 	for i, line := range tokenizedProgram {
 		if line[0][0] == "JMP" {
 			tokenizedProgram[i] = createJumpAddress(labels, line, i)
 		}
-		finishedLine = mnemonicsToOpcode(line)
-		if len(finishedLine) != 0 {
-			opcodeProgram = append(opcodeProgram, finishedLine)
-		}
+		opcodeProgram = append(opcodeProgram, mnemonicsToOpcode(line))
 	}
 	return opcodeProgram
 }
@@ -229,13 +232,23 @@ func checkJumps(line [][]string, labels map[string]int, i int) map[string]int {
 	return labels
 }
 
+func delLabels(tokenizedProgram [][][]string) [][][]string {
+	var cleanedProgram [][][]string
+	for _, line := range tokenizedProgram {
+		if line[0][1] != "Label" {
+			cleanedProgram = append(cleanedProgram, line)
+		}
+	}
+	return cleanedProgram
+}
+
 func createJumpAddress(labels map[string]int, line [][]string, i int) [][]string {
 	var targetLine int = labels[line[1][0]]
 	if targetLine == 0 {
 		err := "Undefined label \"" + line[1][0] + "\""
 		log.Fatal(err)
 	}
-	line[1][0] = intToStr(targetLine - i)
+	line[1][0] = intToStr(targetLine - i - 1)
 	return line
 }
 
@@ -303,8 +316,6 @@ func mnemonicsToOpcode(line [][]string) []int {
 		newLine = []int{RET}
 	} else if string(line[0][0]) == "HLT" {
 		newLine = []int{HLT}
-	} else if string(line[0][0][len(line[0][0])-1]) == ":" {
-		newLine = []int{}
 	} else {
 		log.Fatal("Err in mnemonicsToOpcode : " + string(line[0][0]))
 	}
