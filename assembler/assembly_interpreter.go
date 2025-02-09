@@ -223,7 +223,7 @@ func checkSyntax(line [][]string, rules []string, i int) {
 func checkJumps(line [][]string, labels map[string]int, i int) map[string]int {
 	if string(line[0][0][len(line[0][0])-1]) == ":" {
 		if !inList(forbiddenLabels, string(line[0][0][:len(line[0][0])-1])) {
-			labels[string(line[0][0][:len(line[0][0])-1])] = i
+			labels[string(line[0][0][:len(line[0][0])-1])] = i - len(labels)
 		} else {
 			err := "Forbiddent label name \"" + string(line[0][0][:len(line[0])-1]) + "\" at line " + intToStr(i)
 			log.Fatal(err)
@@ -388,11 +388,7 @@ func executeProgram(assemblerProgram [][]int) {
 				}
 			}
 		case JMP:
-			if assemblerProgram[i][1] > 0 {
-				i = i + assemblerProgram[i][1] - 1
-			} else {
-				i = i + assemblerProgram[i][1]
-			}
+			i = i + assemblerProgram[i][1]
 		}
 		fmt.Println(i, assemblerProgram[i], registers, stack)
 	}
