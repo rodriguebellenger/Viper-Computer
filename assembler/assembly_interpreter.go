@@ -405,11 +405,12 @@ func executeProgram(assemblerProgram [][]int) {
 			var arg2 int = assemblerProgram[i][2]
 			var arg3 int = assemblerProgram[i][3]
 			var exponent int = exponentOfPowerOfTwo(arg1) - 2
+			var numberToStore int = registers[arg3]
 			var bytes int
 			for i := range exponent {
-				bytes = registers[arg3] & 255
+				bytes = numberToStore & 255
 				RAM[registers[arg2]+i] = bytes
-				registers[arg3] = registers[arg3] >> 8
+				numberToStore = numberToStore >> 8
 			}
 		case READ:
 			var arg1 int = assemblerProgram[i][1]
@@ -418,7 +419,7 @@ func executeProgram(assemblerProgram [][]int) {
 			var exponent int = exponentOfPowerOfTwo(arg2) - 2
 			var storedNumber int = 0
 			for j := 0; j < exponent; j++ {
-				storedNumber += RAM[arg3+j] << (8 * j)
+				storedNumber += RAM[registers[arg3]+j] << (8 * j)
 			}
 			registers[arg1] = storedNumber
 		case SWAP:
@@ -431,7 +432,7 @@ func executeProgram(assemblerProgram [][]int) {
 			stack = append(stack, i)
 			i = i + assemblerProgram[i][1]
 		}
-		//fmt.Println(i, assemblerProgram[i], registers, stack)
+		fmt.Println(i, assemblerProgram[i], registers, stack, RAM)
 	}
 	fmt.Println(registers, stack, RAM)
 }

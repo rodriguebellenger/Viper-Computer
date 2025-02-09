@@ -11,14 +11,22 @@ RET
 
 Main:
 
-MOV R4 10    
+MOV R4 3
 Loop:
 ADDI R4 -1
 CMP R4 R0 G
 JMP Loop
 
-MOV R1 55
-MOV R2 10
+MOV R1 2
+MOV R2 150
 CALL Multiplication
+
+MOV R4 12
+WRT @16 *R4 R3
+
+READ R5 @16 *R4
+
+PUSH R5
+POP R6
 
 HLT
