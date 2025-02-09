@@ -13,7 +13,7 @@ import (
 // DATA //
 //////////
 
-var mnemonics []string = []string{"MOV", "ADDI", "ADD", "AND", "OR", "NOT", "PUSH", "POP", "SWAP", "CMP", "JMP", "RET", "HLT", "WRT", "READ"}
+var mnemonics []string = []string{"MOV", "ADDI", "ADD", "AND", "OR", "NOT", "PUSH", "POP", "SWAP", "CMP", "JMP", "RET", "HLT", "WRT", "READ", "CALL"}
 var registersName []string = []string{"R0", "R1", "R2", "R3", "R4", "R5", "R6", "R7", "R8", "R9", "R10", "R11", "R12", "R13", "R14", "R15"}
 var registers []int = []int{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 var RAM [16]int
@@ -35,6 +35,7 @@ const (
 	WRT
 	READ
 	SWAP
+	CALL
 )
 
 var syntaxRules = map[string][]string{
@@ -53,6 +54,7 @@ var syntaxRules = map[string][]string{
 	"WRT":  {"Size", "Address", "Register"},
 	"READ": {"Register", "Size", "Address"},
 	"SWAP": {"Register", "Register"},
+	"CALL": {"Label"},
 }
 
 var forbiddenLabels []string = []string{"R0", "R1", "R2", "R3", "R4", "R5", "R6", "R7", "R8", "R9", "R10", "R11", "R12", "R13", "R14", "R15",
@@ -124,7 +126,7 @@ func programCleaner(assemblerProgram [][]string) [][]int {
 
 	var opcodeProgram [][]int
 	for i, line := range tokenizedProgram {
-		if line[0][0] == "JMP" {
+		if line[0][0] == "JMP" || line[0][0] == "CALL" {
 			tokenizedProgram[i] = createJumpAddress(labels, line, i)
 		}
 		opcodeProgram = append(opcodeProgram, mnemonicsToOpcode(line))
@@ -176,7 +178,7 @@ func checkWords(line []string, i int) [][]string {
 			newLine = append(newLine, []string{word, "Operation"})
 		} else if inList([]string{"G", "L", "E"}, word) {
 			newLine = append(newLine, []string{word, "Comparison"})
-		} else if word[len(word)-1] == ':' || (j > 0 && line[j-1] == "JMP") {
+		} else if word[len(word)-1] == ':' || (j > 0 && (line[j-1] == "JMP" || line[j-1] == "CALL")) {
 			newLine = append(newLine, []string{word, "Label"})
 		} else if inList(registersName, word) {
 			newLine = append(newLine, []string{word[1:], "Register"})
@@ -326,6 +328,9 @@ func mnemonicsToOpcode(line [][]string) []int {
 		var arg2 int = strToInt(line[2][0])
 		var arg3 int = strToInt(line[3][0])
 		newLine = []int{READ, arg1, arg2, arg3}
+	} else if string(line[0][0]) == "CALL" {
+		var arg1 int = strToInt(line[1][0])
+		newLine = []int{CALL, arg1}
 	} else {
 		log.Fatal("Err in mnemonicsToOpcode : " + string(line[0][0]))
 	}
@@ -422,6 +427,9 @@ func executeProgram(assemblerProgram [][]int) {
 			intermediateVariable := registers[arg1]
 			registers[arg1] = registers[arg2]
 			registers[arg2] = intermediateVariable
+		case CALL:
+			stack = append(stack, i)
+			i = i + assemblerProgram[i][1]
 		}
 		//fmt.Println(i, assemblerProgram[i], registers, stack)
 	}

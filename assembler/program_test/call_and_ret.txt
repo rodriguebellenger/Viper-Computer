@@ -1,0 +1,23 @@
+JMP Main
+
+Multiplication:
+MOV R3 0
+Submult:
+ADD R3 R2
+ADDI R1 -1
+CMP R1 R0 G
+JMP Submult
+RET
+
+Main:
+
+MOV R4 10    
+Loop:
+ADDI R4 -1
+CMP R4 R0 G
+JMP Loop
+
+MOV R1 2
+MOV R2 3
+CALL Multiplication
+HLT
