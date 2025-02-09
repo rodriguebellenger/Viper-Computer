@@ -9,15 +9,14 @@ import (
 	"time"
 )
 
-var debug bool = false
-
 //////////
 // DATA //
 //////////
 
-var mnemonics []string = []string{"MOV", "ADDI", "ADD", "AND", "OR", "NOT", "PUSH", "POP", "SWAP", "CMP", "JMP", "RET", "HLT"}
+var mnemonics []string = []string{"MOV", "ADDI", "ADD", "AND", "OR", "NOT", "PUSH", "POP", "SWAP", "CMP", "JMP", "RET", "HLT", "WRT", "READ"}
 var registersName []string = []string{"R0", "R1", "R2", "R3", "R4", "R5", "R6", "R7", "R8", "R9", "R10", "R11", "R12", "R13", "R14", "R15"}
 var registers []int = []int{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+var RAM [16]int
 var stack []int = []int{}
 
 const (
@@ -51,8 +50,8 @@ var syntaxRules = map[string][]string{
 	"POP":  {"Register"},
 	"CMP":  {"Register", "Register", "Comparison"},
 	"JMP":  {"Label"},
-	"WRT":  {},
-	"READ": {},
+	"WRT":  {"Size", "Address", "Register"},
+	"READ": {"Register", "Size", "Address"},
 	"SWAP": {"Register", "Register"},
 }
 
@@ -70,9 +69,6 @@ func main() {
 	content, err := os.ReadFile("assembler/program_test/" + args[0])
 	if err != nil {
 		log.Fatal("\rCouldn't read file")
-	}
-	if len(args) > 1 && args[1] == "debug" {
-		debug = true
 	}
 
 	var program string = string(content)
@@ -152,12 +148,8 @@ func cleanEmpty(assemblerProgram [][]string) [][]string {
 	return cleanedProgram
 }
 
-func skipEmptyLine(line []string) bool {
-	return len(line) == 0
-}
-
 func checkUnexpectedCharacter(line []string) []string {
-	validChars := "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz1234567890:-"
+	validChars := "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz1234567890:-*@"
 	for i := range len(line) {
 		var cleanedString string = ""
 		for _, character := range line[i] {
@@ -188,6 +180,10 @@ func checkWords(line []string, i int) [][]string {
 			newLine = append(newLine, []string{word, "Label"})
 		} else if inList(registersName, word) {
 			newLine = append(newLine, []string{word[1:], "Register"})
+		} else if word[0] == '@' && isInt(word[1:]) && isPowerOfTwo(strToInt(word[1:])) && strToInt(word[1:]) >= 8 {
+			newLine = append(newLine, []string{word[1:], "Size"})
+		} else if word[0] == '*' && inList(registersName, word[1:]) {
+			newLine = append(newLine, []string{word[2:], "Address"})
 		} else {
 			for _, character := range word {
 				if !(strings.Contains("-0123456789", string(character))) {
@@ -211,6 +207,10 @@ func checkSyntax(line [][]string, rules []string, i int) {
 		} else if rule == "Label" && line[j+1][1] != "Label" {
 			errorSyntax = true
 		} else if rule == "Number" && line[j+1][1] != "Number" {
+			errorSyntax = true
+		} else if rule == "Address" && line[j+1][1] != "Address" {
+			errorSyntax = true
+		} else if rule == "Size" && line[j+1][1] != "Size" {
 			errorSyntax = true
 		}
 	}
@@ -316,6 +316,16 @@ func mnemonicsToOpcode(line [][]string) []int {
 		newLine = []int{RET}
 	} else if string(line[0][0]) == "HLT" {
 		newLine = []int{HLT}
+	} else if string(line[0][0]) == "WRT" {
+		var arg1 int = strToInt(line[1][0])
+		var arg2 int = strToInt(line[2][0])
+		var arg3 int = strToInt(line[3][0])
+		newLine = []int{WRT, arg1, arg2, arg3}
+	} else if string(line[0][0]) == "READ" {
+		var arg1 int = strToInt(line[1][0])
+		var arg2 int = strToInt(line[2][0])
+		var arg3 int = strToInt(line[3][0])
+		newLine = []int{READ, arg1, arg2, arg3}
 	} else {
 		log.Fatal("Err in mnemonicsToOpcode : " + string(line[0][0]))
 	}
@@ -363,13 +373,8 @@ func executeProgram(assemblerProgram [][]int) {
 		case NOT:
 			var arg int = assemblerProgram[i][1]
 			registers[arg] = ^registers[arg]
-		case SWAP:
-			var arg1 int = assemblerProgram[i][1]
-			var arg2 int = assemblerProgram[i][2]
-			intermediateVariable := registers[arg1]
-			registers[arg1] = registers[arg2]
-			registers[arg2] = intermediateVariable
 		case CMP:
+			//fmt.Println(i, assemblerProgram[i], registers, stack)
 			var arg1 int = assemblerProgram[i][1]
 			var arg2 int = assemblerProgram[i][2]
 			var arg3 int = assemblerProgram[i][3]
@@ -388,11 +393,39 @@ func executeProgram(assemblerProgram [][]int) {
 				}
 			}
 		case JMP:
+			//fmt.Println(i, assemblerProgram[i], registers, stack)
 			i = i + assemblerProgram[i][1]
+		case WRT:
+			var arg1 int = assemblerProgram[i][1]
+			var arg2 int = assemblerProgram[i][2]
+			var arg3 int = assemblerProgram[i][3]
+			var exponent int = exponentOfPowerOfTwo(arg1) - 2
+			var bytes int
+			for i := range exponent {
+				bytes = registers[arg3] & 255
+				RAM[registers[arg2]+i] = bytes
+				registers[arg3] = registers[arg3] >> 8
+			}
+		case READ:
+			var arg1 int = assemblerProgram[i][1]
+			var arg2 int = assemblerProgram[i][2]
+			var arg3 int = assemblerProgram[i][3]
+			var exponent int = exponentOfPowerOfTwo(arg2) - 2
+			var storedNumber int = 0
+			for j := 0; j < exponent; j++ {
+				storedNumber += RAM[arg3+j] << (8 * j)
+			}
+			registers[arg1] = storedNumber
+		case SWAP:
+			var arg1 int = assemblerProgram[i][1]
+			var arg2 int = assemblerProgram[i][2]
+			intermediateVariable := registers[arg1]
+			registers[arg1] = registers[arg2]
+			registers[arg2] = intermediateVariable
 		}
-		fmt.Println(i, assemblerProgram[i], registers, stack)
+		//fmt.Println(i, assemblerProgram[i], registers, stack)
 	}
-	fmt.Println(registers, stack)
+	fmt.Println(registers, stack, RAM)
 }
 
 ///////////
@@ -406,6 +439,15 @@ func strToInt(x string) int {
 		return -1
 	}
 	return num
+}
+
+func isInt(x string) bool {
+	for _, char := range x {
+		if !(strings.Contains("0123456789", string(char))) {
+			return false
+		}
+	}
+	return true
 }
 
 func intToStr(x int) string {
@@ -429,4 +471,17 @@ func inListBool(liste []bool, item bool) bool {
 		}
 	}
 	return false
+}
+
+func isPowerOfTwo(x int) bool {
+	return x >= 2 && (x&(x-1)) == 0
+}
+
+func exponentOfPowerOfTwo(x int) int {
+	var exponent int = 0
+	for x > 1 {
+		x = x >> 1
+		exponent += 1
+	}
+	return exponent
 }
