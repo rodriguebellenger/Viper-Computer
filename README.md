@@ -4,7 +4,7 @@ The viper computer is a virtual computer created to learn what programmation is 
 
 # Assembly
 
-For the moment, you have the assembly interpreter, which is almost finished.
+For the moment, you have the assembly interpreter.
 
 ## Operations
 
@@ -16,9 +16,16 @@ Stops the program no matter what.
 ---
 
 ```
+CALL Label
+```
+Jump to the address of the label, and push the current address onto the stack.
+
+---
+
+```
 RET
 ```
-Return to the "address" at the top of the stack (it isn't a real address for the moment).
+Return to the address at the top of the stack.
 
 ---
 
@@ -26,8 +33,7 @@ Return to the "address" at the top of the stack (it isn't a real address for the
 MOV R1 255
 ```
 Move the number to the register specified (see registers section).
-The number is 32 bits.
-No access yet to any kind of memory (except registers).
+The number is 64 bits.
 
 ---
 
@@ -102,11 +108,29 @@ Jump inconditionally to a label.
 ---
 
 ```
+WRT @32 *R1 R2
+```
+Write the value of a register at an address contained in a register, with the size indicated.
+In this case, it puts the value of R2 at the addres contained in R1, plus the three next address because the value is 32bits.
+
+---
+
+```
+READ R1 @32 *R2
+```
+Read the value at an address contained in a register, with the size indicated, and put it in a register.
+In this case, it reads the value of the address contained in R2, plus the three next address because the value is 32bits, and puts it in R1.
+
+---
+
+```
 Label:
 ```
 Create a label that you can jump to.
 
 ## Registers
 
-Registers 0 through 15.
-There are still no convention about the use of any other registers.
+There are 16 registers, R0 through R15.
+
+Convention : 
+R0 is a constant and always is 0. Nothing stop you from changing it, but I don't think it should.
