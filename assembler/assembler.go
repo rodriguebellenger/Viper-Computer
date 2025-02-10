@@ -68,7 +68,7 @@ var forbiddenLabels []string = []string{"R0", "R1", "R2", "R3", "R4", "R5", "R6"
 
 func main() {
 	args := os.Args[1:] // Skip the program name
-	content, err := os.ReadFile("assembler/program_test/" + args[0])
+	content, err := os.ReadFile(args[0])
 	if err != nil {
 		log.Fatal("\rCouldn't read file")
 	}
@@ -432,7 +432,7 @@ func executeProgram(assemblerProgram [][]int) {
 			stack = append(stack, i)
 			i = i + assemblerProgram[i][1]
 		}
-		fmt.Println(i, assemblerProgram[i], registers, stack, RAM)
+		//fmt.Println(i, assemblerProgram[i], registers, stack, RAM)
 	}
 	fmt.Println(registers, stack, RAM)
 }
