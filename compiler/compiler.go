@@ -27,7 +27,11 @@ const (
 
 	size        // Ex : @8 ; @64 ; ...
 	assignement // Ex : =
+
+	EOL // Ex : End Of Line
 )
+
+var dataTypes []string = []string{"int"}
 
 var listReservedKeywords []string = []string{"int"}
 
@@ -46,15 +50,19 @@ func main() {
 	var program string = string(content)
 	fmt.Println(program)
 
-	var parsedProgram []Token = parser(program)
+	var parsedProgram []Token = tokenize(program)
 	fmt.Println(parsedProgram)
+
+	var variables = make(map[string]string)
+	//variables = lexer(parsedProgram)
+	fmt.Println(variables)
 }
 
-////////////
-// PARSER //
-////////////
+///////////////
+// TOKENIZER //
+///////////////
 
-func parser(program string) []Token {
+func tokenize(program string) []Token {
 	var parsedProgram []Token
 	var column int
 	var row int
@@ -69,6 +77,10 @@ func parser(program string) []Token {
 			}
 
 			if string(program[i]) == "\n" {
+				token.column = column
+				token.row = row
+				token.value = word
+				token.tokenType = EOL
 				column = 0
 				row += 1
 			}
@@ -113,6 +125,10 @@ func findSymbolType(word string) int {
 	}
 	return -1
 }
+
+///////////
+// LEXER //
+///////////
 
 ///////////
 // UTILS //
