@@ -1,6 +1,6 @@
 MOV R0 0
 MOV R1 1000000000
-     
+
 Loop:
 ADDI R1 -1
 CMP R1 R0 G
