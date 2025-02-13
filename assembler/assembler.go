@@ -57,6 +57,25 @@ var syntaxRules = map[string][]string{
 	"CALL": {"Label"},
 }
 
+var memorySize = map[string]int{
+	"HLT":  1,
+	"RET":  1,
+	"AND":  3,
+	"OR":   3,
+	"NOT":  2,
+	"ADD":  3,
+	"ADDI": 3,
+	"MOV":  10,
+	"PUSH": 2,
+	"POP":  2,
+	"CMP":  4,
+	"JMP":  5,
+	"WRT":  7,
+	"READ": 7,
+	"SWAP": 3,
+	"CALL": 5,
+}
+
 var forbiddenLabels []string = []string{"R0", "R1", "R2", "R3", "R4", "R5", "R6", "R7", "R8", "R9", "R10", "R11", "R12", "R13", "R14", "R15",
 	"r0", "r1", "r2", "r3", "r4", "r5", "r6", "r7", "r8", "r9", "r10", "r11", "r12", "r13", "r14", "r15",
 	"HLT", "RET", "AND", "OR", "NOT", "ADD", "ADDI", "MOV", "PUSH", "POP", "CMP", "JMP", "WRT", "READ", "SWAP",
@@ -74,16 +93,16 @@ func main() {
 	}
 
 	var program string = string(content)
-	var assemblerProgram []string = readProgram(program)
+	var assemblerProgram [][]string = readProgram(program)
 
 	var startTime time.Time = time.Now()
-	var opcodeProgram [][]string = programCleaner(assemblerProgram)
+	var opcodeProgram = programCleaner(assemblerProgram)
 	var elapsed time.Duration = time.Since(startTime)
 	fmt.Println(opcodeProgram)
 	fmt.Printf("Temps : %s\n", elapsed)
 
 	startTime = time.Now()
-	//executeProgram(opcodeProgram)
+	executeProgram(opcodeProgram)
 	elapsed = time.Since(startTime)
 	fmt.Printf("Temps : %s\n", elapsed)
 }
@@ -92,19 +111,12 @@ func main() {
 // INTERPRETER //
 /////////////////
 
-func readProgram(program string) []string {
-	var assemblerProgram []string
+func readProgram(program string) [][]string {
+	var operations []string = strings.Split(program, "\n")
+	var assemblerProgram [][]string
 
-	var word string
-	for _, c := range program {
-		if c == ' ' || c == '\n' {
-			if len(word) != 0 {
-				assemblerProgram = append(assemblerProgram, word)
-				word = ""
-			}
-		} else {
-			word += string(c)
-		}
+	for _, line := range operations {
+		assemblerProgram = append(assemblerProgram, strings.Fields(line))
 	}
 
 	return assemblerProgram
@@ -114,13 +126,16 @@ func readProgram(program string) []string {
 // Clean the program //
 ///////////////////////
 
-func programCleaner(assemblerProgram []string) [][]int {
-	var labels = make(map[string]int)
-	var tokenizedProgram [][]string
+func programCleaner(assemblerProgram [][]string) [][]int {
+	// Deletion of everything that is empty
+	assemblerProgram = cleanEmpty(assemblerProgram)
 
-	for i := 0; i < len(assemblerProgram); i++ {
-		assemblerProgram[i] = checkUnexpectedCharacter(assemblerProgram[i])
-		checkNumberOfArgs(assemblerProgram[i], i)
+	var labels = make(map[string]int)
+	var tokenizedProgram [][][]string
+
+	for i, line := range assemblerProgram {
+		line = checkUnexpectedCharacter(line)
+		checkNumberOfArgs(line, i)
 		tokenizedProgram = append(tokenizedProgram, checkWords(line, i))
 		checkSyntax(tokenizedProgram[i], syntaxRules[tokenizedProgram[i][0][0]], i)
 		labels = checkJumps(tokenizedProgram[i], labels, i)
@@ -138,19 +153,41 @@ func programCleaner(assemblerProgram []string) [][]int {
 	return opcodeProgram
 }
 
-func checkUnexpectedCharacter(word string) string {
-	validChars := "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz1234567890:-*@"
-	var newWord string
-	for _, c := range word {
-		if strings.Contains(validChars, string(c)) {
-			newWord += string(c)
+func cleanEmpty(assemblerProgram [][]string) [][]string {
+	var cleanedProgram [][]string
+	for _, line := range assemblerProgram {
+		var cleanedLine []string
+		for _, word := range line {
+			if len(word) != 0 {
+				cleanedLine = append(cleanedLine, word)
+			}
+		}
+		if len(cleanedLine) != 0 {
+			cleanedProgram = append(cleanedProgram, cleanedLine)
 		}
 	}
-	return newWord
+	return cleanedProgram
 }
 
-func checkNumberOfArgs(line string, i int) {
-	for i := range len(syntaxRules[])
+func checkUnexpectedCharacter(line []string) []string {
+	validChars := "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz1234567890:-*@"
+	for i := range len(line) {
+		var cleanedString string = ""
+		for _, character := range line[i] {
+			if strings.Contains(validChars, string(character)) {
+				cleanedString += string(character)
+			}
+		}
+		line[i] = cleanedString
+	}
+	return line
+}
+
+func checkNumberOfArgs(line []string, i int) {
+	if len(syntaxRules[line[0]]) != len(line)-1 {
+		err := "Wrong number of args for \"" + line[0] + "\" at line " + intToStr(i+1)
+		log.Fatal(err)
+	}
 }
 
 func checkWords(line []string, i int) [][]string {
