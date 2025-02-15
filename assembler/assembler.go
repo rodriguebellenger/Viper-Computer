@@ -38,6 +38,25 @@ const (
 	CALL
 )
 
+var opcodeToMnemonics = map[int]string{
+	HLT:  "HLT",
+	RET:  "RET",
+	AND:  "AND",
+	OR:   "OR",
+	NOT:  "NOT",
+	ADD:  "ADD",
+	ADDI: "ADDI",
+	MOV:  "MOV",
+	PUSH: "PUSH",
+	POP:  "POP",
+	CMP:  "CMP",
+	JMP:  "JMP",
+	WRT:  "WRT",
+	READ: "READ",
+	SWAP: "SWAP",
+	CALL: "CALL",
+}
+
 var syntaxRules = map[string][]string{
 	"HLT":  {},
 	"RET":  {},
@@ -96,13 +115,13 @@ func main() {
 	var assemblerProgram [][]string = readProgram(program)
 
 	var startTime time.Time = time.Now()
-	var opcodeProgram = programCleaner(assemblerProgram)
+	var byteProgram = programCleaner(assemblerProgram)
 	var elapsed time.Duration = time.Since(startTime)
-	fmt.Println(opcodeProgram)
+	fmt.Println(byteProgram)
 	fmt.Printf("Temps : %s\n", elapsed)
 
 	startTime = time.Now()
-	executeProgram(opcodeProgram)
+	executeProgram(byteProgram)
 	elapsed = time.Since(startTime)
 	fmt.Printf("Temps : %s\n", elapsed)
 }
@@ -126,31 +145,37 @@ func readProgram(program string) [][]string {
 // Clean the program //
 ///////////////////////
 
-func programCleaner(assemblerProgram [][]string) [][]int {
-	// Deletion of everything that is empty
+func programCleaner(assemblerProgram [][]string) []int {
 	assemblerProgram = cleanEmpty(assemblerProgram)
 
 	var labels = make(map[string]int)
 	var tokenizedProgram [][][]string
 
+	var memoryAddress int
 	for i, line := range assemblerProgram {
 		line = checkUnexpectedCharacter(line)
 		checkNumberOfArgs(line, i)
 		tokenizedProgram = append(tokenizedProgram, checkWords(line, i))
 		checkSyntax(tokenizedProgram[i], syntaxRules[tokenizedProgram[i][0][0]], i)
-		labels = checkJumps(tokenizedProgram[i], labels, i)
+		labels = checkJumps(tokenizedProgram[i], labels, i, memoryAddress)
+		memoryAddress += memorySize[tokenizedProgram[i][0][0]]
 	}
 
 	tokenizedProgram = delLabels(tokenizedProgram)
 
+	memoryAddress = 0
 	var opcodeProgram [][]int
 	for i, line := range tokenizedProgram {
 		if line[0][0] == "JMP" || line[0][0] == "CALL" {
-			tokenizedProgram[i] = createJumpAddress(labels, line, i)
+			tokenizedProgram[i] = createJumpAddress(labels, line, memoryAddress)
 		}
 		opcodeProgram = append(opcodeProgram, mnemonicsToOpcode(line))
+		memoryAddress += memorySize[tokenizedProgram[i][0][0]]
 	}
-	return opcodeProgram
+
+	var bytePogram []int = bytificationOfTheProgram(opcodeProgram)
+
+	return bytePogram
 }
 
 func cleanEmpty(assemblerProgram [][]string) [][]string {
@@ -202,7 +227,7 @@ func checkWords(line []string, i int) [][]string {
 		} else if inList(registersName, word) {
 			newLine = append(newLine, []string{word[1:], "Register"})
 		} else if word[0] == '@' && isInt(word[1:]) && isPowerOfTwo(strToInt(word[1:])) && strToInt(word[1:]) >= 8 {
-			newLine = append(newLine, []string{word[1:], "Size"})
+			newLine = append(newLine, []string{intToStr(exponentOfPowerOfTwo(strToInt(word[1:])) - 2), "Size"})
 		} else if word[0] == '*' && inList(registersName, word[1:]) {
 			newLine = append(newLine, []string{word[2:], "Address"})
 		} else {
@@ -241,10 +266,10 @@ func checkSyntax(line [][]string, rules []string, i int) {
 	}
 }
 
-func checkJumps(line [][]string, labels map[string]int, i int) map[string]int {
+func checkJumps(line [][]string, labels map[string]int, i int, memoryAddress int) map[string]int {
 	if string(line[0][0][len(line[0][0])-1]) == ":" {
 		if !inList(forbiddenLabels, string(line[0][0][:len(line[0][0])-1])) {
-			labels[string(line[0][0][:len(line[0][0])-1])] = i - len(labels)
+			labels[string(line[0][0][:len(line[0][0])-1])] = memoryAddress
 		} else {
 			err := "Forbiddent label name \"" + string(line[0][0][:len(line[0])-1]) + "\" at line " + intToStr(i)
 			log.Fatal(err)
@@ -263,13 +288,13 @@ func delLabels(tokenizedProgram [][][]string) [][][]string {
 	return cleanedProgram
 }
 
-func createJumpAddress(labels map[string]int, line [][]string, i int) [][]string {
+func createJumpAddress(labels map[string]int, line [][]string, memoryAdress int) [][]string {
 	var targetLine int = labels[line[1][0]]
 	if targetLine == 0 {
 		err := "Undefined label \"" + line[1][0] + "\""
 		log.Fatal(err)
 	}
-	line[1][0] = intToStr(targetLine - i - 1)
+	line[1][0] = intToStr(targetLine - memoryAdress - 5)
 	return line
 }
 
@@ -356,52 +381,146 @@ func mnemonicsToOpcode(line [][]string) []int {
 	return newLine
 }
 
+func bytificationOfTheProgram(opcodeProgram [][]int) []int {
+	var byteProgram []int
+	for _, line := range opcodeProgram {
+		switch line[0] {
+		case HLT:
+			byteProgram = append(byteProgram, HLT)
+		case RET:
+			byteProgram = append(byteProgram, RET)
+		case MOV:
+			byteProgram = append(byteProgram, MOV)
+			byteProgram = append(byteProgram, line[1])
+			var argument int
+			for i := range 8 {
+				line[2] >>= 8 * i
+				argument = line[2] & 255
+				byteProgram = append(byteProgram, argument)
+			}
+		case ADD:
+			byteProgram = append(byteProgram, ADD)
+			byteProgram = append(byteProgram, line[1])
+			byteProgram = append(byteProgram, line[2])
+		case ADDI:
+			byteProgram = append(byteProgram, ADDI)
+			byteProgram = append(byteProgram, line[1])
+			byteProgram = append(byteProgram, line[2])
+		case PUSH:
+			byteProgram = append(byteProgram, PUSH)
+			byteProgram = append(byteProgram, line[1])
+		case POP:
+			byteProgram = append(byteProgram, POP)
+			byteProgram = append(byteProgram, line[1])
+		case AND:
+			byteProgram = append(byteProgram, AND)
+			byteProgram = append(byteProgram, line[1])
+			byteProgram = append(byteProgram, line[2])
+		case OR:
+			byteProgram = append(byteProgram, OR)
+			byteProgram = append(byteProgram, line[1])
+			byteProgram = append(byteProgram, line[2])
+		case NOT:
+			byteProgram = append(byteProgram, NOT)
+			byteProgram = append(byteProgram, line[1])
+		case CMP:
+			byteProgram = append(byteProgram, CMP)
+			byteProgram = append(byteProgram, line[1])
+			byteProgram = append(byteProgram, line[2])
+			byteProgram = append(byteProgram, line[3])
+		case JMP:
+			byteProgram = append(byteProgram, JMP)
+			var argument int
+			for i := range 4 {
+				line[1] >>= 8 * i
+				argument = line[1] & 255
+				byteProgram = append(byteProgram, argument)
+			}
+		case WRT:
+			byteProgram = append(byteProgram, WRT)
+			byteProgram = append(byteProgram, line[1])
+			byteProgram = append(byteProgram, line[2])
+			byteProgram = append(byteProgram, line[3])
+		case READ:
+			byteProgram = append(byteProgram, READ)
+			byteProgram = append(byteProgram, line[1])
+			byteProgram = append(byteProgram, line[2])
+			byteProgram = append(byteProgram, line[3])
+		case SWAP:
+			byteProgram = append(byteProgram, SWAP)
+			byteProgram = append(byteProgram, line[1])
+			byteProgram = append(byteProgram, line[2])
+		case CALL:
+			byteProgram = append(byteProgram, CALL)
+			var argument int
+			for i := range 4 {
+				line[1] >>= 8 * i
+				argument = line[1] & 255
+				byteProgram = append(byteProgram, argument)
+			}
+		}
+	}
+	return byteProgram
+}
+
 /////////////////////////
 // Execute the program //
 /////////////////////////
 
-func executeProgram(assemblerProgram [][]int) {
-	for i := 0; i < len(assemblerProgram); i++ {
-		switch assemblerProgram[i][0] {
+func executeProgram(byteProgram []int) {
+	for i := 0; i < len(byteProgram); i++ {
+		switch byteProgram[i] {
 		case HLT:
 			break
 		case RET:
 			i = stack[len(stack)-1]
 			stack = stack[:len(stack)-1]
 		case MOV:
-			var arg int = assemblerProgram[i][1]
-			registers[arg] = assemblerProgram[i][2]
+			var arg1 int = byteProgram[i+1]
+			var arg2 int
+			for j := range 8 {
+				arg2 += byteProgram[i+2+j] << 8 * j
+			}
+			registers[arg1] = arg2
+			i += memorySize[opcodeToMnemonics[MOV]] - 1
 		case ADD:
-			var arg1 int = assemblerProgram[i][1]
-			var arg2 int = assemblerProgram[i][2]
+			var arg1 int = byteProgram[i+1]
+			var arg2 int = byteProgram[i+2]
 			registers[arg1] = registers[arg1] + registers[arg2]
+			i += memorySize[opcodeToMnemonics[ADD]] - 1
 		case ADDI:
-			var arg1 int = assemblerProgram[i][1]
-			var arg2 int = assemblerProgram[i][2]
-			registers[arg1] = registers[arg1] + arg2
+			var arg1 int = byteProgram[i+1]
+			var arg2 int = byteProgram[i+2]
+			registers[arg1] += arg2
+			i += memorySize[opcodeToMnemonics[ADDI]] - 1
 		case PUSH:
-			var arg int = assemblerProgram[i][1]
+			var arg int = byteProgram[i+1]
 			stack = append(stack, registers[arg])
+			i += memorySize[opcodeToMnemonics[PUSH]] - 1
 		case POP:
-			var arg int = assemblerProgram[i][1]
+			var arg int = byteProgram[i+1]
 			registers[arg] = stack[len(stack)-1]
 			stack = stack[:len(stack)-1]
+			i += memorySize[opcodeToMnemonics[POP]] - 1
 		case AND:
-			var arg1 int = assemblerProgram[i][1]
-			var arg2 int = assemblerProgram[i][2]
+			var arg1 int = byteProgram[i+1]
+			var arg2 int = byteProgram[i+2]
 			registers[arg1] = registers[arg1] & registers[arg2]
+			i += memorySize[opcodeToMnemonics[AND]] - 1
 		case OR:
-			var arg1 int = assemblerProgram[i][1]
-			var arg2 int = assemblerProgram[i][2]
+			var arg1 int = byteProgram[i+1]
+			var arg2 int = byteProgram[i+2]
 			registers[arg1] = registers[arg1] | registers[arg2]
+			i += memorySize[opcodeToMnemonics[OR]] - 1
 		case NOT:
-			var arg int = assemblerProgram[i][1]
+			var arg int = byteProgram[i+1]
 			registers[arg] = ^registers[arg]
+			i += memorySize[opcodeToMnemonics[NOT]] - 1
 		case CMP:
 			//fmt.Println(i, assemblerProgram[i], registers, stack)
-			var arg1 int = assemblerProgram[i][1]
-			var arg2 int = assemblerProgram[i][2]
-			var arg3 int = assemblerProgram[i][3]
+			var arg1 int = byteProgram[i+1]
+			var arg2 int = byteProgram[i+2]
+			var arg3 int = byteProgram[i+3]
 			switch arg3 {
 			case 1:
 				if !(registers[arg1] < registers[arg2]) {
@@ -416,40 +535,50 @@ func executeProgram(assemblerProgram [][]int) {
 					i += 1
 				}
 			}
+			i += memorySize[opcodeToMnemonics[CMP]] - 1
 		case JMP:
 			//fmt.Println(i, assemblerProgram[i], registers, stack)
-			i = i + assemblerProgram[i][1]
+			var offset int
+			for j := range 4 {
+				offset += byteProgram[i+1+j] << 8 * j
+			}
+			i = i + offset
 		case WRT:
-			var arg1 int = assemblerProgram[i][1]
-			var arg2 int = assemblerProgram[i][2]
-			var arg3 int = assemblerProgram[i][3]
-			var exponent int = exponentOfPowerOfTwo(arg1) - 2
+			var arg1 int = byteProgram[i+1]
+			var arg2 int = byteProgram[i+2]
+			var arg3 int = byteProgram[i+3]
 			var numberToStore int = registers[arg3]
 			var bytes int
-			for i := range exponent {
+			for i := range arg1 {
 				bytes = numberToStore & 255
 				RAM[registers[arg2]+i] = bytes
 				numberToStore = numberToStore >> 8
 			}
+			i += memorySize[opcodeToMnemonics[WRT]] - 1
 		case READ:
-			var arg1 int = assemblerProgram[i][1]
-			var arg2 int = assemblerProgram[i][2]
-			var arg3 int = assemblerProgram[i][3]
-			var exponent int = exponentOfPowerOfTwo(arg2) - 2
+			var arg1 int = byteProgram[i+1]
+			var arg2 int = byteProgram[i+2]
+			var arg3 int = byteProgram[i+3]
 			var storedNumber int = 0
-			for j := 0; j < exponent; j++ {
+			for j := 0; j < arg2; j++ {
 				storedNumber += RAM[registers[arg3]+j] << (8 * j)
 			}
 			registers[arg1] = storedNumber
+			i += memorySize[opcodeToMnemonics[READ]] - 1
 		case SWAP:
-			var arg1 int = assemblerProgram[i][1]
-			var arg2 int = assemblerProgram[i][2]
+			var arg1 int = byteProgram[i+1]
+			var arg2 int = byteProgram[i+2]
 			intermediateVariable := registers[arg1]
 			registers[arg1] = registers[arg2]
 			registers[arg2] = intermediateVariable
+			i += memorySize[opcodeToMnemonics[SWAP]] - 1
 		case CALL:
 			stack = append(stack, i)
-			i = i + assemblerProgram[i][1]
+			var offset int
+			for j := range 4 {
+				offset += byteProgram[i+1+j] << 8 * j
+			}
+			i = i + offset
 		}
 		//fmt.Println(i, assemblerProgram[i], registers, stack, RAM)
 	}
