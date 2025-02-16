@@ -479,7 +479,7 @@ func executeProgram(byteProgram []int) {
 			var arg1 int = byteProgram[i+1]
 			var arg2 int
 			for j := range 8 {
-				arg2 += byteProgram[i+2+j] << 8 * j
+				arg2 += byteProgram[i+2+j] << (8 * j)
 			}
 			registers[arg1] = arg2
 			i += memorySize[opcodeToMnemonics[MOV]] - 1
@@ -537,12 +537,16 @@ func executeProgram(byteProgram []int) {
 			}
 			i += memorySize[opcodeToMnemonics[CMP]] - 1
 		case JMP:
-			//fmt.Println(i, assemblerProgram[i], registers, stack)
-			var offset int
+			fmt.Println(byteProgram[i], registers, stack, RAM)
+			var offset int = 0
 			for j := range 4 {
-				offset += byteProgram[i+1+j] << 8 * j
+				offset += byteProgram[i+1+j] << (8 * j)
 			}
-			i = i + offset
+			if offset > 0 {
+				i = i + offset + 4
+			} else {
+				i = i + offset
+			}
 		case WRT:
 			var arg1 int = byteProgram[i+1]
 			var arg2 int = byteProgram[i+2]
@@ -573,14 +577,19 @@ func executeProgram(byteProgram []int) {
 			registers[arg2] = intermediateVariable
 			i += memorySize[opcodeToMnemonics[SWAP]] - 1
 		case CALL:
+			fmt.Println(byteProgram[i], registers, stack, RAM)
 			stack = append(stack, i)
 			var offset int
 			for j := range 4 {
-				offset += byteProgram[i+1+j] << 8 * j
+				offset += byteProgram[i+1+j] << (8 * j)
 			}
-			i = i + offset
+			if offset > 0 {
+				i = i + offset + 4
+			} else {
+				i = i + offset
+			}
 		}
-		//fmt.Println(i, assemblerProgram[i], registers, stack, RAM)
+		fmt.Println(byteProgram[i+1], registers, stack, RAM)
 	}
 	fmt.Println(registers, stack, RAM)
 }
