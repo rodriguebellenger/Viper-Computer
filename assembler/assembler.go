@@ -160,7 +160,6 @@ func programCleaner(assemblerProgram [][]string) []int {
 		labels = checkJumps(tokenizedProgram[i], labels, i, memoryAddress)
 		memoryAddress += memorySize[tokenizedProgram[i][0][0]]
 	}
-
 	tokenizedProgram = delLabels(tokenizedProgram)
 
 	memoryAddress = 0
@@ -294,7 +293,7 @@ func createJumpAddress(labels map[string]int, line [][]string, memoryAdress int)
 		err := "Undefined label \"" + line[1][0] + "\""
 		log.Fatal(err)
 	}
-	line[1][0] = intToStr(targetLine - memoryAdress - 5)
+	line[1][0] = intToStr(targetLine - memoryAdress - 1)
 	return line
 }
 
@@ -469,10 +468,12 @@ func bytificationOfTheProgram(opcodeProgram [][]int) []int {
 
 func executeProgram(byteProgram []int) {
 	for i := 0; i < len(byteProgram); i++ {
+		var debugVariable int = i
 		switch byteProgram[i] {
 		case HLT:
 			break
 		case RET:
+			fmt.Println(i, opcodeToMnemonics[byteProgram[i]], registers, stack, RAM)
 			i = stack[len(stack)-1]
 			stack = stack[:len(stack)-1]
 		case MOV:
@@ -517,14 +518,14 @@ func executeProgram(byteProgram []int) {
 			registers[arg] = ^registers[arg]
 			i += memorySize[opcodeToMnemonics[NOT]] - 1
 		case CMP:
-			//fmt.Println(i, assemblerProgram[i], registers, stack)
+			fmt.Println(i, opcodeToMnemonics[byteProgram[i]], registers, stack, RAM)
 			var arg1 int = byteProgram[i+1]
 			var arg2 int = byteProgram[i+2]
 			var arg3 int = byteProgram[i+3]
 			switch arg3 {
 			case 1:
 				if !(registers[arg1] < registers[arg2]) {
-					i += 1
+					i += memorySize[opcodeToMnemonics[i+memorySize[opcodeToMnemonics[CMP]]]]
 				}
 			case 2:
 				if !(registers[arg1] > registers[arg2]) {
@@ -537,15 +538,21 @@ func executeProgram(byteProgram []int) {
 			}
 			i += memorySize[opcodeToMnemonics[CMP]] - 1
 		case JMP:
-			fmt.Println(byteProgram[i], registers, stack, RAM)
-			var offset int = 0
-			for j := range 4 {
-				offset += byteProgram[i+1+j] << (8 * j)
+			fmt.Println(i, opcodeToMnemonics[byteProgram[i]], registers, stack, RAM)
+			var offset int32 // Use int32 to allow negative values
+			for j := 0; j < 4; j++ {
+				offset += int32(byteProgram[i+1+j]) << (8 * j)
 			}
+
+			// Sign extension for 32-bit signed values
+			if offset>>31 == 1 {
+				offset = (^offset) + 1
+			}
+
 			if offset > 0 {
-				i = i + offset + 4
+				i = i + int(offset) + 4
 			} else {
-				i = i + offset
+				i = i + int(offset)
 			}
 		case WRT:
 			var arg1 int = byteProgram[i+1]
@@ -577,7 +584,7 @@ func executeProgram(byteProgram []int) {
 			registers[arg2] = intermediateVariable
 			i += memorySize[opcodeToMnemonics[SWAP]] - 1
 		case CALL:
-			fmt.Println(byteProgram[i], registers, stack, RAM)
+			fmt.Println(i, opcodeToMnemonics[byteProgram[i]], registers, stack, RAM)
 			stack = append(stack, i)
 			var offset int
 			for j := range 4 {
@@ -589,7 +596,7 @@ func executeProgram(byteProgram []int) {
 				i = i + offset
 			}
 		}
-		fmt.Println(byteProgram[i+1], registers, stack, RAM)
+		fmt.Println(debugVariable, opcodeToMnemonics[byteProgram[debugVariable]], registers, stack, RAM)
 	}
 	fmt.Println(registers, stack, RAM)
 }

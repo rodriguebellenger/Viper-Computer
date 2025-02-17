@@ -1,7 +1,9 @@
 MOV R0 0
-MOV R1 10
+MOV R1 3
      
 Loop:
 ADDI R1 -1
 CMP R1 R0 G
 JMP Loop
+
+HLT
