@@ -467,6 +467,7 @@ func bytificationOfTheProgram(opcodeProgram [][]int) []int {
 /////////////////////////
 
 func executeProgram(byteProgram []int) {
+	var x int
 	for i := 0; i < len(byteProgram); i++ {
 		var debugVariable int = i
 		switch byteProgram[i] {
@@ -518,7 +519,6 @@ func executeProgram(byteProgram []int) {
 			registers[arg] = ^registers[arg]
 			i += memorySize[opcodeToMnemonics[NOT]] - 1
 		case CMP:
-			fmt.Println(i, opcodeToMnemonics[byteProgram[i]], registers, stack, RAM)
 			var arg1 int = byteProgram[i+1]
 			var arg2 int = byteProgram[i+2]
 			var arg3 int = byteProgram[i+3]
@@ -529,16 +529,21 @@ func executeProgram(byteProgram []int) {
 				}
 			case 2:
 				if !(registers[arg1] > registers[arg2]) {
-					i += 1
+					i += memorySize[opcodeToMnemonics[i+memorySize[opcodeToMnemonics[CMP]]]]
+					fmt.Println("incr i")
+				} else {
+					fmt.Println("not incr i")
 				}
 			case 3:
 				if registers[arg1] != registers[arg2] {
-					i += 1
+					i += memorySize[opcodeToMnemonics[i+memorySize[opcodeToMnemonics[CMP]]]]
 				}
 			}
+			//fmt.Println(i)
+			//fmt.Println(memorySize[opcodeToMnemonics[CMP]] - 1)
 			i += memorySize[opcodeToMnemonics[CMP]] - 1
+			//fmt.Println(i)
 		case JMP:
-			fmt.Println(i, opcodeToMnemonics[byteProgram[i]], registers, stack, RAM)
 			var offset int32 // Use int32 to allow negative values
 			for j := 0; j < 4; j++ {
 				offset += int32(byteProgram[i+1+j]) << (8 * j)
@@ -584,7 +589,6 @@ func executeProgram(byteProgram []int) {
 			registers[arg2] = intermediateVariable
 			i += memorySize[opcodeToMnemonics[SWAP]] - 1
 		case CALL:
-			fmt.Println(i, opcodeToMnemonics[byteProgram[i]], registers, stack, RAM)
 			stack = append(stack, i)
 			var offset int
 			for j := range 4 {
@@ -597,6 +601,10 @@ func executeProgram(byteProgram []int) {
 			}
 		}
 		fmt.Println(debugVariable, opcodeToMnemonics[byteProgram[debugVariable]], registers, stack, RAM)
+		x += 1
+		if x > 30 {
+			break
+		}
 	}
 	fmt.Println(registers, stack, RAM)
 }
