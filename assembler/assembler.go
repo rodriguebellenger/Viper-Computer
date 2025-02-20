@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"math"
 	"os"
 	"strconv"
 	"strings"
@@ -64,16 +65,16 @@ var syntaxRules = map[string][]string{
 	"OR":   {"Register", "Register"},
 	"NOT":  {"Register"},
 	"ADD":  {"Register", "Register"},
-	"ADDI": {"Register", "Number"},
-	"MOV":  {"Register", "Number"},
+	"ADDI": {"Register", "Number1"},
+	"MOV":  {"Register", "Number8"},
 	"PUSH": {"Register"},
 	"POP":  {"Register"},
 	"CMP":  {"Register", "Register", "Comparison"},
-	"JMP":  {"Label"},
+	"JMP":  {"Offset"},
 	"WRT":  {"Size", "Address", "Register"},
 	"READ": {"Register", "Size", "Address"},
 	"SWAP": {"Register", "Register"},
-	"CALL": {"Label"},
+	"CALL": {"Offset"},
 }
 
 var memorySize = map[string]int{
@@ -115,13 +116,13 @@ func main() {
 	var assemblerProgram [][]string = readProgram(program)
 
 	var startTime time.Time = time.Now()
-	var byteProgram = programCleaner(assemblerProgram)
+	var byteProgram []uint = programCleaner(assemblerProgram)
 	var elapsed time.Duration = time.Since(startTime)
 	fmt.Println(byteProgram)
 	fmt.Printf("Temps : %s\n", elapsed)
 
 	startTime = time.Now()
-	executeProgram(byteProgram)
+	//executeProgram(byteProgram)
 	elapsed = time.Since(startTime)
 	fmt.Printf("Temps : %s\n", elapsed)
 }
@@ -145,7 +146,7 @@ func readProgram(program string) [][]string {
 // Clean the program //
 ///////////////////////
 
-func programCleaner(assemblerProgram [][]string) []int {
+func programCleaner(assemblerProgram [][]string) []uint {
 	assemblerProgram = cleanEmpty(assemblerProgram)
 
 	var labels = make(map[string]int)
@@ -163,7 +164,7 @@ func programCleaner(assemblerProgram [][]string) []int {
 	tokenizedProgram = delLabels(tokenizedProgram)
 
 	memoryAddress = 0
-	var opcodeProgram [][]int
+	var opcodeProgram [][]uint
 	for i, line := range tokenizedProgram {
 		if line[0][0] == "JMP" || line[0][0] == "CALL" {
 			tokenizedProgram[i] = createJumpAddress(labels, line, memoryAddress)
@@ -172,7 +173,7 @@ func programCleaner(assemblerProgram [][]string) []int {
 		memoryAddress += memorySize[tokenizedProgram[i][0][0]]
 	}
 
-	var bytePogram []int = bytificationOfTheProgram(opcodeProgram)
+	var bytePogram []uint = bytificationOfTheProgram(opcodeProgram)
 
 	return bytePogram
 }
@@ -222,21 +223,23 @@ func checkWords(line []string, i int) [][]string {
 		} else if inList([]string{"G", "L", "E"}, word) {
 			newLine = append(newLine, []string{word, "Comparison"})
 		} else if word[len(word)-1] == ':' || (j > 0 && (line[j-1] == "JMP" || line[j-1] == "CALL")) {
-			newLine = append(newLine, []string{word, "Label"})
+			newLine = append(newLine, []string{word, "Offset"})
 		} else if inList(registersName, word) {
 			newLine = append(newLine, []string{word[1:], "Register"})
 		} else if word[0] == '@' && isInt(word[1:]) && isPowerOfTwo(strToInt(word[1:])) && strToInt(word[1:]) >= 8 {
 			newLine = append(newLine, []string{intToStr(exponentOfPowerOfTwo(strToInt(word[1:])) - 2), "Size"})
 		} else if word[0] == '*' && inList(registersName, word[1:]) {
 			newLine = append(newLine, []string{word[2:], "Address"})
-		} else {
-			for _, character := range word {
-				if !(strings.Contains("-0123456789", string(character))) {
-					err := "Unrecognized word \"" + word + "\" at line " + intToStr(i+1)
-					log.Fatal(err)
-				}
+		} else if isInt(word) {
+			var number int = strToInt(word)
+			if line[0] == "ADDI" && number < 129 && number > -128 {
+				newLine = append(newLine, []string{word, "Number1"})
+			} else if line[0] == "MOV" && number > int(-math.Pow(2, 63)) && number < int(math.Pow(2, 63))-1 {
+				newLine = append(newLine, []string{word, "Number8"})
+			} else {
+				err := "Unrecognized token \"" + word + "\" at line " + intToStr(i+1)
+				log.Fatal(err)
 			}
-			newLine = append(newLine, []string{word, "Number"})
 		}
 	}
 	return newLine
@@ -249,13 +252,15 @@ func checkSyntax(line [][]string, rules []string, i int) {
 			errorSyntax = true
 		} else if rule == "Comparison" && line[j+1][1] != "Comparison" {
 			errorSyntax = true
-		} else if rule == "Label" && line[j+1][1] != "Label" {
-			errorSyntax = true
-		} else if rule == "Number" && line[j+1][1] != "Number" {
+		} else if rule == "Offset" && line[j+1][1] != "Offset" {
 			errorSyntax = true
 		} else if rule == "Address" && line[j+1][1] != "Address" {
 			errorSyntax = true
 		} else if rule == "Size" && line[j+1][1] != "Size" {
+			errorSyntax = true
+		} else if rule == "Number1" && line[j+1][1] != "Number1" {
+			errorSyntax = true
+		} else if rule == "Number8" && line[j+1][1] != "Number8" {
 			errorSyntax = true
 		}
 	}
@@ -280,7 +285,7 @@ func checkJumps(line [][]string, labels map[string]int, i int, memoryAddress int
 func delLabels(tokenizedProgram [][][]string) [][][]string {
 	var cleanedProgram [][][]string
 	for _, line := range tokenizedProgram {
-		if line[0][1] != "Label" {
+		if line[0][1] != "Offset" {
 			cleanedProgram = append(cleanedProgram, line)
 		}
 	}
@@ -297,165 +302,187 @@ func createJumpAddress(labels map[string]int, line [][]string, memoryAdress int)
 	return line
 }
 
-func mnemonicsToOpcode(line [][]string) []int {
-	var newLine []int
+func mnemonicsToOpcode(line [][]string) []uint {
+	var newLine []uint
 	if string(line[0][0]) == "MOV" {
-		var arg1 int = strToInt(line[1][0])
-		var arg2 int = strToInt(line[2][0])
-		newLine = []int{MOV, arg1, arg2}
-
+		var arg1 uint = uint(strToInt(line[1][0]))
+		var arg2 string = line[2][0]
+		if arg2[0] == '-' {
+			arg2 = arg2[1:]
+			var arg2 uint = uint(^strToInt(arg2) + 1)
+			newLine = []uint{uint(MOV), uint(arg1), arg2}
+		} else {
+			newLine = []uint{uint(MOV), uint(arg1), uint(strToInt(arg2))}
+		}
 	} else if string(line[0][0]) == "ADD" {
-		var arg1 int = strToInt(line[1][0])
-		var arg2 int = strToInt(line[2][0])
-		newLine = []int{ADD, arg1, arg2}
+		var arg1 uint = uint(strToInt(line[1][0]))
+		var arg2 uint = uint(strToInt(line[2][0]))
+		newLine = []uint{uint(ADD), arg1, arg2}
 
 	} else if string(line[0][0]) == "ADDI" {
-		var arg1 int = strToInt(line[1][0])
-		var arg2 int = strToInt(line[2][0])
-		newLine = []int{ADDI, arg1, arg2}
-
+		var arg1 uint = uint(strToInt(line[1][0]))
+		var arg2 string = line[2][0]
+		if arg2[0] == '-' {
+			arg2 = arg2[1:]
+			var arg2 uint = uint(^strToInt(arg2) + 1)
+			newLine = []uint{uint(MOV), arg1, arg2}
+		} else {
+			newLine = []uint{uint(MOV), arg1, uint(strToInt(arg2))}
+		}
 	} else if string(line[0][0]) == "PUSH" {
-		var arg1 int = strToInt(line[1][0])
-		newLine = []int{PUSH, arg1}
+		var arg1 uint = uint(strToInt(line[1][0]))
+		newLine = []uint{uint(PUSH), arg1}
 
 	} else if string(line[0][0]) == "POP" {
-		var arg1 int = strToInt(line[1][0])
-		newLine = []int{POP, arg1}
+		var arg1 uint = uint(strToInt(line[1][0]))
+		newLine = []uint{uint(POP), arg1}
 
 	} else if string(line[0][0]) == "AND" {
-		var arg1 int = strToInt(line[1][0])
-		var arg2 int = strToInt(line[2][0])
-		newLine = []int{AND, arg1, arg2}
+		var arg1 uint = uint(strToInt(line[1][0]))
+		var arg2 uint = uint(strToInt(line[2][0]))
+		newLine = []uint{uint(AND), arg1, arg2}
 
 	} else if string(line[0][0]) == "OR" {
-		var arg1 int = strToInt(line[1][0])
-		var arg2 int = strToInt(line[2][0])
-		newLine = []int{OR, arg1, arg2}
+		var arg1 uint = uint(strToInt(line[1][0]))
+		var arg2 uint = uint(strToInt(line[2][0]))
+		newLine = []uint{uint(OR), arg1, arg2}
 
 	} else if string(line[0][0]) == "NOT" {
-		var arg1 int = strToInt(line[1][0])
-		newLine = []int{NOT, arg1}
+		var arg1 uint = uint(strToInt(line[1][0]))
+		newLine = []uint{uint(NOT), arg1}
 
 	} else if string(line[0][0]) == "SWAP" {
-		var arg1 int = strToInt(line[1][0])
-		var arg2 int = strToInt(line[2][0])
-		newLine = []int{SWAP, arg1, arg2}
+		var arg1 uint = uint(strToInt(line[1][0]))
+		var arg2 uint = uint(strToInt(line[2][0]))
+		newLine = []uint{uint(SWAP), arg1, arg2}
 
 	} else if string(line[0][0]) == "CMP" {
-		var arg1 int = strToInt(line[1][0])
-		var arg2 int = strToInt(line[2][0])
+		var arg1 uint = uint(strToInt(line[1][0]))
+		var arg2 uint = uint(strToInt(line[2][0]))
 		var arg3 string = line[3][0]
 		if inList([]string{"L", "G", "E"}, arg3) {
 			if arg3 == "L" {
-				newLine = []int{CMP, arg1, arg2, 1}
+				newLine = []uint{uint(CMP), arg1, arg2, 1}
 			} else if arg3 == "G" {
-				newLine = []int{CMP, arg1, arg2, 2}
+				newLine = []uint{uint(CMP), arg1, arg2, 2}
 			} else if arg3 == "E" {
-				newLine = []int{CMP, arg1, arg2, 3}
+				newLine = []uint{uint(CMP), arg1, arg2, 3}
 			}
 		}
 	} else if string(line[0][0]) == "JMP" {
-		var arg1 int = strToInt(line[1][0])
-		newLine = []int{JMP, arg1}
+		var arg1 string = line[1][0]
+		if arg1[0] == '-' {
+			arg1 = arg1[1:]
+			var arg1 uint = uint(^strToInt(arg1) + 1)
+			newLine = []uint{uint(JMP), arg1}
+		} else {
+			newLine = []uint{uint(JMP), uint(strToInt(arg1))}
+		}
 	} else if string(line[0][0]) == "RET" {
-		newLine = []int{RET}
+		newLine = []uint{uint(RET)}
 	} else if string(line[0][0]) == "HLT" {
-		newLine = []int{HLT}
+		newLine = []uint{uint(HLT)}
 	} else if string(line[0][0]) == "WRT" {
-		var arg1 int = strToInt(line[1][0])
-		var arg2 int = strToInt(line[2][0])
-		var arg3 int = strToInt(line[3][0])
-		newLine = []int{WRT, arg1, arg2, arg3}
+		var arg1 uint = uint(strToInt(line[1][0]))
+		var arg2 uint = uint(strToInt(line[2][0]))
+		var arg3 uint = uint(strToInt(line[3][0]))
+		newLine = []uint{uint(WRT), arg1, arg2, arg3}
 	} else if string(line[0][0]) == "READ" {
-		var arg1 int = strToInt(line[1][0])
-		var arg2 int = strToInt(line[2][0])
-		var arg3 int = strToInt(line[3][0])
-		newLine = []int{READ, arg1, arg2, arg3}
+		var arg1 uint = uint(strToInt(line[1][0]))
+		var arg2 uint = uint(strToInt(line[2][0]))
+		var arg3 uint = uint(strToInt(line[3][0]))
+		newLine = []uint{uint(READ), arg1, arg2, arg3}
 	} else if string(line[0][0]) == "CALL" {
-		var arg1 int = strToInt(line[1][0])
-		newLine = []int{CALL, arg1}
+		var arg1 string = line[1][0]
+		if arg1[0] == '-' {
+			arg1 = arg1[1:]
+			var arg1 uint = uint(^strToInt(arg1) + 1)
+			newLine = []uint{uint(CALL), arg1}
+		} else {
+			newLine = []uint{uint(CALL), uint(strToInt(arg1))}
+		}
 	} else {
 		log.Fatal("Err in mnemonicsToOpcode : " + string(line[0][0]))
 	}
 	return newLine
 }
 
-func bytificationOfTheProgram(opcodeProgram [][]int) []int {
-	var byteProgram []int
+func bytificationOfTheProgram(opcodeProgram [][]uint) []uint {
+	var byteProgram []uint
 	for _, line := range opcodeProgram {
 		switch line[0] {
-		case HLT:
-			byteProgram = append(byteProgram, HLT)
-		case RET:
-			byteProgram = append(byteProgram, RET)
-		case MOV:
-			byteProgram = append(byteProgram, MOV)
-			byteProgram = append(byteProgram, line[1])
-			var argument int
-			for i := range 8 {
-				line[2] >>= 8 * i
-				argument = line[2] & 255
+		case uint(HLT):
+			byteProgram = append(byteProgram, uint(HLT))
+		case uint(RET):
+			byteProgram = append(byteProgram, uint(RET))
+		case uint(MOV):
+			byteProgram = append(byteProgram, uint(MOV))
+			byteProgram = append(byteProgram, uint(line[1]))
+			var argument uint
+			for range 8 {
+				argument = uint(line[2]) & 255
 				byteProgram = append(byteProgram, argument)
+				line[2] >>= 8
 			}
-		case ADD:
-			byteProgram = append(byteProgram, ADD)
-			byteProgram = append(byteProgram, line[1])
-			byteProgram = append(byteProgram, line[2])
-		case ADDI:
-			byteProgram = append(byteProgram, ADDI)
-			byteProgram = append(byteProgram, line[1])
-			byteProgram = append(byteProgram, line[2])
-		case PUSH:
-			byteProgram = append(byteProgram, PUSH)
-			byteProgram = append(byteProgram, line[1])
-		case POP:
-			byteProgram = append(byteProgram, POP)
-			byteProgram = append(byteProgram, line[1])
-		case AND:
-			byteProgram = append(byteProgram, AND)
-			byteProgram = append(byteProgram, line[1])
-			byteProgram = append(byteProgram, line[2])
-		case OR:
-			byteProgram = append(byteProgram, OR)
-			byteProgram = append(byteProgram, line[1])
-			byteProgram = append(byteProgram, line[2])
-		case NOT:
-			byteProgram = append(byteProgram, NOT)
-			byteProgram = append(byteProgram, line[1])
-		case CMP:
-			byteProgram = append(byteProgram, CMP)
-			byteProgram = append(byteProgram, line[1])
-			byteProgram = append(byteProgram, line[2])
-			byteProgram = append(byteProgram, line[3])
-		case JMP:
-			byteProgram = append(byteProgram, JMP)
-			var argument int
-			for i := range 4 {
-				line[1] >>= 8 * i
-				argument = line[1] & 255
+		case uint(ADD):
+			byteProgram = append(byteProgram, uint(ADD))
+			byteProgram = append(byteProgram, uint(line[1]))
+			byteProgram = append(byteProgram, uint(line[2]))
+		case uint(ADDI):
+			byteProgram = append(byteProgram, uint(ADDI))
+			byteProgram = append(byteProgram, uint(line[1]))
+			byteProgram = append(byteProgram, uint(line[2]))
+		case uint(PUSH):
+			byteProgram = append(byteProgram, uint(PUSH))
+			byteProgram = append(byteProgram, uint(line[1]))
+		case uint(POP):
+			byteProgram = append(byteProgram, uint(POP))
+			byteProgram = append(byteProgram, uint(line[1]))
+		case uint(AND):
+			byteProgram = append(byteProgram, uint(AND))
+			byteProgram = append(byteProgram, uint(line[1]))
+			byteProgram = append(byteProgram, uint(line[2]))
+		case uint(OR):
+			byteProgram = append(byteProgram, uint(OR))
+			byteProgram = append(byteProgram, uint(line[1]))
+			byteProgram = append(byteProgram, uint(line[2]))
+		case uint(NOT):
+			byteProgram = append(byteProgram, uint(NOT))
+			byteProgram = append(byteProgram, uint(line[1]))
+		case uint(CMP):
+			byteProgram = append(byteProgram, uint(CMP))
+			byteProgram = append(byteProgram, uint(line[1]))
+			byteProgram = append(byteProgram, uint(line[2]))
+			byteProgram = append(byteProgram, uint(line[3]))
+		case uint(JMP):
+			byteProgram = append(byteProgram, uint(JMP))
+			var argument uint
+			for range 4 {
+				argument = uint(line[1]) & 255
 				byteProgram = append(byteProgram, argument)
+				line[1] >>= 8
 			}
-		case WRT:
-			byteProgram = append(byteProgram, WRT)
-			byteProgram = append(byteProgram, line[1])
-			byteProgram = append(byteProgram, line[2])
-			byteProgram = append(byteProgram, line[3])
-		case READ:
-			byteProgram = append(byteProgram, READ)
-			byteProgram = append(byteProgram, line[1])
-			byteProgram = append(byteProgram, line[2])
-			byteProgram = append(byteProgram, line[3])
-		case SWAP:
-			byteProgram = append(byteProgram, SWAP)
-			byteProgram = append(byteProgram, line[1])
-			byteProgram = append(byteProgram, line[2])
-		case CALL:
-			byteProgram = append(byteProgram, CALL)
-			var argument int
-			for i := range 4 {
-				line[1] >>= 8 * i
-				argument = line[1] & 255
+		case uint(WRT):
+			byteProgram = append(byteProgram, uint(WRT))
+			byteProgram = append(byteProgram, uint(line[1]))
+			byteProgram = append(byteProgram, uint(line[2]))
+			byteProgram = append(byteProgram, uint(line[3]))
+		case uint(READ):
+			byteProgram = append(byteProgram, uint(READ))
+			byteProgram = append(byteProgram, uint(line[1]))
+			byteProgram = append(byteProgram, uint(line[2]))
+			byteProgram = append(byteProgram, uint(line[3]))
+		case uint(SWAP):
+			byteProgram = append(byteProgram, uint(SWAP))
+			byteProgram = append(byteProgram, uint(line[1]))
+			byteProgram = append(byteProgram, uint(line[2]))
+		case uint(CALL):
+			byteProgram = append(byteProgram, uint(CALL))
+			var argument uint
+			for range 4 {
+				argument = uint(line[1]) & 255
 				byteProgram = append(byteProgram, argument)
+				line[1] >>= 8
 			}
 		}
 	}
@@ -623,10 +650,13 @@ func strToInt(x string) int {
 }
 
 func isInt(x string) bool {
-	for _, char := range x {
+	for _, char := range x[1:] {
 		if !(strings.Contains("0123456789", string(char))) {
 			return false
 		}
+	}
+	if !(strings.Contains("-0123456789", string(x[0]))) {
+		return false
 	}
 	return true
 }
