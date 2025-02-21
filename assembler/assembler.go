@@ -16,9 +16,9 @@ import (
 
 var mnemonics []string = []string{"MOV", "ADDI", "ADD", "AND", "OR", "NOT", "PUSH", "POP", "SWAP", "CMP", "JMP", "RET", "HLT", "WRT", "READ", "CALL"}
 var registersName []string = []string{"R0", "R1", "R2", "R3", "R4", "R5", "R6", "R7", "R8", "R9", "R10", "R11", "R12", "R13", "R14", "R15"}
-var registers []int = []int{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
-var RAM [16]int
-var stack []int = []int{}
+var registers []uint64 = []uint64{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+var RAM [16]uint8
+var stack []uint8 = []uint8{}
 
 const (
 	HLT int = iota
@@ -116,13 +116,13 @@ func main() {
 	var assemblerProgram [][]string = readProgram(program)
 
 	var startTime time.Time = time.Now()
-	var byteProgram []uint = programCleaner(assemblerProgram)
+	var byteProgram []uint8 = programCleaner(assemblerProgram)
 	var elapsed time.Duration = time.Since(startTime)
 	fmt.Println(byteProgram)
 	fmt.Printf("Temps : %s\n", elapsed)
 
 	startTime = time.Now()
-	//executeProgram(byteProgram)
+	executeProgram(byteProgram)
 	elapsed = time.Since(startTime)
 	fmt.Printf("Temps : %s\n", elapsed)
 }
@@ -146,7 +146,7 @@ func readProgram(program string) [][]string {
 // Clean the program //
 ///////////////////////
 
-func programCleaner(assemblerProgram [][]string) []uint {
+func programCleaner(assemblerProgram [][]string) []uint8 {
 	assemblerProgram = cleanEmpty(assemblerProgram)
 
 	var labels = make(map[string]int)
@@ -161,6 +161,7 @@ func programCleaner(assemblerProgram [][]string) []uint {
 		labels = checkJumps(tokenizedProgram[i], labels, i, memoryAddress)
 		memoryAddress += memorySize[tokenizedProgram[i][0][0]]
 	}
+
 	tokenizedProgram = delLabels(tokenizedProgram)
 
 	memoryAddress = 0
@@ -173,7 +174,7 @@ func programCleaner(assemblerProgram [][]string) []uint {
 		memoryAddress += memorySize[tokenizedProgram[i][0][0]]
 	}
 
-	var bytePogram []uint = bytificationOfTheProgram(opcodeProgram)
+	var bytePogram []uint8 = bytificationOfTheProgram(opcodeProgram)
 
 	return bytePogram
 }
@@ -264,23 +265,14 @@ func checkSyntax(line [][]string, rules []string, i int) {
 			errorSyntax = true
 		}
 	}
-	if errorSyntax {
-		err := "Args don't respect syntax rule for \"" + line[0][0] + "\" at line " + intToStr(i+1)
+	if errorSyntax == true {
+		err := "Syntax error at line " + intToStr(i+1)
 		log.Fatal(err)
 	}
 }
 
-func checkJumps(line [][]string, labels map[string]int, i int, memoryAddress int) map[string]int {
-	if string(line[0][0][len(line[0][0])-1]) == ":" {
-		if !inList(forbiddenLabels, string(line[0][0][:len(line[0][0])-1])) {
-			labels[string(line[0][0][:len(line[0][0])-1])] = memoryAddress
-		} else {
-			err := "Forbiddent label name \"" + string(line[0][0][:len(line[0])-1]) + "\" at line " + intToStr(i)
-			log.Fatal(err)
-		}
-	}
-	return labels
-}
+//err := "Forbiddent label name \"" + string(line[0][0][:len(line[0])-1]) + "\" at line " + intToStr(i)
+//log.Fatal(err)
 
 func delLabels(tokenizedProgram [][][]string) [][][]string {
 	var cleanedProgram [][][]string
@@ -325,9 +317,9 @@ func mnemonicsToOpcode(line [][]string) []uint {
 		if arg2[0] == '-' {
 			arg2 = arg2[1:]
 			var arg2 uint = uint(^strToInt(arg2) + 1)
-			newLine = []uint{uint(MOV), arg1, arg2}
+			newLine = []uint{uint(ADDI), arg1, arg2}
 		} else {
-			newLine = []uint{uint(MOV), arg1, uint(strToInt(arg2))}
+			newLine = []uint{uint(ADDI), arg1, uint(strToInt(arg2))}
 		}
 	} else if string(line[0][0]) == "PUSH" {
 		var arg1 uint = uint(strToInt(line[1][0]))
@@ -407,80 +399,80 @@ func mnemonicsToOpcode(line [][]string) []uint {
 	return newLine
 }
 
-func bytificationOfTheProgram(opcodeProgram [][]uint) []uint {
-	var byteProgram []uint
+func bytificationOfTheProgram(opcodeProgram [][]uint) []uint8 {
+	var byteProgram []uint8
 	for _, line := range opcodeProgram {
 		switch line[0] {
 		case uint(HLT):
-			byteProgram = append(byteProgram, uint(HLT))
+			byteProgram = append(byteProgram, uint8(HLT))
 		case uint(RET):
-			byteProgram = append(byteProgram, uint(RET))
+			byteProgram = append(byteProgram, uint8(RET))
 		case uint(MOV):
-			byteProgram = append(byteProgram, uint(MOV))
-			byteProgram = append(byteProgram, uint(line[1]))
-			var argument uint
+			byteProgram = append(byteProgram, uint8(MOV))
+			byteProgram = append(byteProgram, uint8(line[1]))
+			var argument uint8
 			for range 8 {
-				argument = uint(line[2]) & 255
+				argument = uint8(line[2]) & 255
 				byteProgram = append(byteProgram, argument)
 				line[2] >>= 8
 			}
 		case uint(ADD):
-			byteProgram = append(byteProgram, uint(ADD))
-			byteProgram = append(byteProgram, uint(line[1]))
-			byteProgram = append(byteProgram, uint(line[2]))
+			byteProgram = append(byteProgram, uint8(ADD))
+			byteProgram = append(byteProgram, uint8(line[1]))
+			byteProgram = append(byteProgram, uint8(line[2]))
 		case uint(ADDI):
-			byteProgram = append(byteProgram, uint(ADDI))
-			byteProgram = append(byteProgram, uint(line[1]))
-			byteProgram = append(byteProgram, uint(line[2]))
+			byteProgram = append(byteProgram, uint8(ADDI))
+			byteProgram = append(byteProgram, uint8(line[1]))
+			byteProgram = append(byteProgram, uint8(line[2]))
 		case uint(PUSH):
-			byteProgram = append(byteProgram, uint(PUSH))
-			byteProgram = append(byteProgram, uint(line[1]))
+			byteProgram = append(byteProgram, uint8(PUSH))
+			byteProgram = append(byteProgram, uint8(line[1]))
 		case uint(POP):
-			byteProgram = append(byteProgram, uint(POP))
-			byteProgram = append(byteProgram, uint(line[1]))
+			byteProgram = append(byteProgram, uint8(POP))
+			byteProgram = append(byteProgram, uint8(line[1]))
 		case uint(AND):
-			byteProgram = append(byteProgram, uint(AND))
-			byteProgram = append(byteProgram, uint(line[1]))
-			byteProgram = append(byteProgram, uint(line[2]))
+			byteProgram = append(byteProgram, uint8(AND))
+			byteProgram = append(byteProgram, uint8(line[1]))
+			byteProgram = append(byteProgram, uint8(line[2]))
 		case uint(OR):
-			byteProgram = append(byteProgram, uint(OR))
-			byteProgram = append(byteProgram, uint(line[1]))
-			byteProgram = append(byteProgram, uint(line[2]))
+			byteProgram = append(byteProgram, uint8(OR))
+			byteProgram = append(byteProgram, uint8(line[1]))
+			byteProgram = append(byteProgram, uint8(line[2]))
 		case uint(NOT):
-			byteProgram = append(byteProgram, uint(NOT))
-			byteProgram = append(byteProgram, uint(line[1]))
+			byteProgram = append(byteProgram, uint8(NOT))
+			byteProgram = append(byteProgram, uint8(line[1]))
 		case uint(CMP):
-			byteProgram = append(byteProgram, uint(CMP))
-			byteProgram = append(byteProgram, uint(line[1]))
-			byteProgram = append(byteProgram, uint(line[2]))
-			byteProgram = append(byteProgram, uint(line[3]))
+			byteProgram = append(byteProgram, uint8(CMP))
+			byteProgram = append(byteProgram, uint8(line[1]))
+			byteProgram = append(byteProgram, uint8(line[2]))
+			byteProgram = append(byteProgram, uint8(line[3]))
 		case uint(JMP):
-			byteProgram = append(byteProgram, uint(JMP))
-			var argument uint
+			byteProgram = append(byteProgram, uint8(JMP))
+			var argument uint8
 			for range 4 {
-				argument = uint(line[1]) & 255
+				argument = uint8(line[1]) & 255
 				byteProgram = append(byteProgram, argument)
 				line[1] >>= 8
 			}
 		case uint(WRT):
-			byteProgram = append(byteProgram, uint(WRT))
-			byteProgram = append(byteProgram, uint(line[1]))
-			byteProgram = append(byteProgram, uint(line[2]))
-			byteProgram = append(byteProgram, uint(line[3]))
+			byteProgram = append(byteProgram, uint8(WRT))
+			byteProgram = append(byteProgram, uint8(line[1]))
+			byteProgram = append(byteProgram, uint8(line[2]))
+			byteProgram = append(byteProgram, uint8(line[3]))
 		case uint(READ):
-			byteProgram = append(byteProgram, uint(READ))
-			byteProgram = append(byteProgram, uint(line[1]))
-			byteProgram = append(byteProgram, uint(line[2]))
-			byteProgram = append(byteProgram, uint(line[3]))
+			byteProgram = append(byteProgram, uint8(READ))
+			byteProgram = append(byteProgram, uint8(line[1]))
+			byteProgram = append(byteProgram, uint8(line[2]))
+			byteProgram = append(byteProgram, uint8(line[3]))
 		case uint(SWAP):
-			byteProgram = append(byteProgram, uint(SWAP))
-			byteProgram = append(byteProgram, uint(line[1]))
-			byteProgram = append(byteProgram, uint(line[2]))
+			byteProgram = append(byteProgram, uint8(SWAP))
+			byteProgram = append(byteProgram, uint8(line[1]))
+			byteProgram = append(byteProgram, uint8(line[2]))
 		case uint(CALL):
-			byteProgram = append(byteProgram, uint(CALL))
-			var argument uint
+			byteProgram = append(byteProgram, uint8(CALL))
+			var argument uint8
 			for range 4 {
-				argument = uint(line[1]) & 255
+				argument = uint8(line[1]) & 255
 				byteProgram = append(byteProgram, argument)
 				line[1] >>= 8
 			}
@@ -493,62 +485,70 @@ func bytificationOfTheProgram(opcodeProgram [][]uint) []uint {
 // Execute the program //
 /////////////////////////
 
-func executeProgram(byteProgram []int) {
+func executeProgram(byteProgram []uint8) {
 	var x int
-	for i := 0; i < len(byteProgram); i++ {
-		var debugVariable int = i
+	for i := uint32(0); i < uint32(len(byteProgram)); i++ {
+		var debugVariable uint32 = i
 		switch byteProgram[i] {
-		case HLT:
+		case uint8(HLT):
 			break
-		case RET:
+		case uint8(RET):
 			fmt.Println(i, opcodeToMnemonics[byteProgram[i]], registers, stack, RAM)
 			i = stack[len(stack)-1]
 			stack = stack[:len(stack)-1]
-		case MOV:
-			var arg1 int = byteProgram[i+1]
-			var arg2 int
+		case uint8(MOV):
+			var arg1 uint8 = byteProgram[i+1]
+			var arg2 uint64
 			for j := range 8 {
-				arg2 += byteProgram[i+2+j] << (8 * j)
+				arg2 += uint64(byteProgram[i+2+j] << (8 * j))
 			}
 			registers[arg1] = arg2
 			i += memorySize[opcodeToMnemonics[MOV]] - 1
-		case ADD:
-			var arg1 int = byteProgram[i+1]
-			var arg2 int = byteProgram[i+2]
+		case uint8(ADD):
+			var arg1 uint8 = byteProgram[i+1]
+			var arg2 uint8 = byteProgram[i+2]
 			registers[arg1] = registers[arg1] + registers[arg2]
 			i += memorySize[opcodeToMnemonics[ADD]] - 1
-		case ADDI:
-			var arg1 int = byteProgram[i+1]
-			var arg2 int = byteProgram[i+2]
-			registers[arg1] += arg2
+		case uint8(ADDI):
+			var arg1 uint8 = byteProgram[i+1]
+			var arg2 uint8 = byteProgram[i+2]
+			registers[arg1] += uint64(arg2)
 			i += memorySize[opcodeToMnemonics[ADDI]] - 1
-		case PUSH:
-			var arg int = byteProgram[i+1]
+		case uint8(PUSH):
+			///////////////////////////////
+			////////////////////////////////
+			///////////////////////////////
+			// TO DO : stack is in the RAM, so it only has 8bits by 8bits of memory
+			var arg uint8 = byteProgram[i+1]
 			stack = append(stack, registers[arg])
 			i += memorySize[opcodeToMnemonics[PUSH]] - 1
-		case POP:
+		case uint8(POP):
+			///////////////////////////////
+			////////////////////////////////
+			///////////////////////////////
+			// TO DO : stack is in the RAM, so it only has 8bits by 8bits of memory
 			var arg int = byteProgram[i+1]
 			registers[arg] = stack[len(stack)-1]
 			stack = stack[:len(stack)-1]
 			i += memorySize[opcodeToMnemonics[POP]] - 1
-		case AND:
-			var arg1 int = byteProgram[i+1]
-			var arg2 int = byteProgram[i+2]
+		case uint8(AND):
+			var arg1 uint8 = byteProgram[i+1]
+			var arg2 uint8 = byteProgram[i+2]
 			registers[arg1] = registers[arg1] & registers[arg2]
 			i += memorySize[opcodeToMnemonics[AND]] - 1
-		case OR:
-			var arg1 int = byteProgram[i+1]
-			var arg2 int = byteProgram[i+2]
+		case uint8(OR):
+			var arg1 uint8 = byteProgram[i+1]
+			var arg2 uint8 = byteProgram[i+2]
 			registers[arg1] = registers[arg1] | registers[arg2]
 			i += memorySize[opcodeToMnemonics[OR]] - 1
-		case NOT:
-			var arg int = byteProgram[i+1]
+		case uint8(NOT):
+			var arg uint8 = byteProgram[i+1]
 			registers[arg] = ^registers[arg]
 			i += memorySize[opcodeToMnemonics[NOT]] - 1
-		case CMP:
-			var arg1 int = byteProgram[i+1]
-			var arg2 int = byteProgram[i+2]
-			var arg3 int = byteProgram[i+3]
+		case uint8(CMP):
+			var arg1 uint8 = byteProgram[i+1]
+			var arg2 uint8 = byteProgram[i+2]
+			var arg3 uint8 = byteProgram[i+3]
 			switch arg3 {
 			case 1:
 				if !(registers[arg1] < registers[arg2]) {
@@ -570,56 +570,51 @@ func executeProgram(byteProgram []int) {
 			//fmt.Println(memorySize[opcodeToMnemonics[CMP]] - 1)
 			i += memorySize[opcodeToMnemonics[CMP]] - 1
 			//fmt.Println(i)
-		case JMP:
-			var offset int32 // Use int32 to allow negative values
+		case uint8(JMP):
+			var offset uint32
 			for j := 0; j < 4; j++ {
-				offset += int32(byteProgram[i+1+j]) << (8 * j)
-			}
-
-			// Sign extension for 32-bit signed values
-			if offset>>31 == 1 {
-				offset = (^offset) + 1
+				offset += uint32(byteProgram[i+1+j]) << (8 * j)
 			}
 
 			if offset > 0 {
-				i = i + int(offset) + 4
+				i = int(uint32(i) + offset + 4)
 			} else {
-				i = i + int(offset)
+				i = i + offset
 			}
-		case WRT:
-			var arg1 int = byteProgram[i+1]
-			var arg2 int = byteProgram[i+2]
-			var arg3 int = byteProgram[i+3]
-			var numberToStore int = registers[arg3]
-			var bytes int
+		case uint8(WRT):
+			var arg1 uint8 = byteProgram[i+1]
+			var arg2 uint8 = byteProgram[i+2]
+			var arg3 uint8 = byteProgram[i+3]
+			var numberToStore uint64 = registers[arg3]
+			var bytes uint8
 			for i := range arg1 {
-				bytes = numberToStore & 255
-				RAM[registers[arg2]+i] = bytes
+				bytes = uint8(numberToStore & 255)
+				RAM[registers[arg2]+uint64(i)] = bytes
 				numberToStore = numberToStore >> 8
 			}
 			i += memorySize[opcodeToMnemonics[WRT]] - 1
-		case READ:
-			var arg1 int = byteProgram[i+1]
-			var arg2 int = byteProgram[i+2]
-			var arg3 int = byteProgram[i+3]
-			var storedNumber int = 0
-			for j := 0; j < arg2; j++ {
-				storedNumber += RAM[registers[arg3]+j] << (8 * j)
+		case uint8(READ):
+			var arg1 uint8 = byteProgram[i+1]
+			var arg2 uint8 = byteProgram[i+2]
+			var arg3 uint8 = byteProgram[i+3]
+			var storedNumber uint64 = 0
+			for j := 0; uint8(j) < arg2; j++ {
+				storedNumber += uint64(RAM[registers[arg3]+uint64(j)] << (8 * j))
 			}
 			registers[arg1] = storedNumber
 			i += memorySize[opcodeToMnemonics[READ]] - 1
-		case SWAP:
-			var arg1 int = byteProgram[i+1]
-			var arg2 int = byteProgram[i+2]
+		case uint8(SWAP):
+			var arg1 uint8 = byteProgram[i+1]
+			var arg2 uint8 = byteProgram[i+2]
 			intermediateVariable := registers[arg1]
 			registers[arg1] = registers[arg2]
 			registers[arg2] = intermediateVariable
 			i += memorySize[opcodeToMnemonics[SWAP]] - 1
-		case CALL:
+		case uint8(CALL):
 			stack = append(stack, i)
-			var offset int
-			for j := range 4 {
-				offset += byteProgram[i+1+j] << (8 * j)
+			var offset uint32
+			for j := 0; j < 4; j++ {
+				offset += uint32(byteProgram[i+1+j]) << (8 * j)
 			}
 			if offset > 0 {
 				i = i + offset + 4
