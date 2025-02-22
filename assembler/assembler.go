@@ -122,7 +122,7 @@ func main() {
 	fmt.Printf("Temps : %s\n", elapsed)
 
 	startTime = time.Now()
-	executeProgram(byteProgram)
+	//executeProgram(byteProgram)
 	elapsed = time.Since(startTime)
 	fmt.Printf("Temps : %s\n", elapsed)
 }
@@ -147,36 +147,52 @@ func readProgram(program string) [][]string {
 ///////////////////////
 
 func programCleaner(assemblerProgram [][]string) []uint8 {
+	var assemblerProgramWithBlankLine [][]string = assemblerProgram
+	var numberOfBlankLines int
 	assemblerProgram = cleanEmpty(assemblerProgram)
 
-	var labels = make(map[string]int)
+	//var labels = make(map[string]int)
 	var tokenizedProgram [][][]string
 
-	var memoryAddress int
+	//var memoryAddress int
 	for i, line := range assemblerProgram {
-		line = checkUnexpectedCharacter(line)
-		checkNumberOfArgs(line, i)
-		tokenizedProgram = append(tokenizedProgram, checkWords(line, i))
-		checkSyntax(tokenizedProgram[i], syntaxRules[tokenizedProgram[i][0][0]], i)
-		labels = checkJumps(tokenizedProgram[i], labels, i, memoryAddress)
-		memoryAddress += memorySize[tokenizedProgram[i][0][0]]
-	}
-
-	tokenizedProgram = delLabels(tokenizedProgram)
-
-	memoryAddress = 0
-	var opcodeProgram [][]uint
-	for i, line := range tokenizedProgram {
-		if line[0][0] == "JMP" || line[0][0] == "CALL" {
-			tokenizedProgram[i] = createJumpAddress(labels, line, memoryAddress)
+		for isEmpty(assemblerProgramWithBlankLine[i+numberOfBlankLines]) {
+			numberOfBlankLines += 1
 		}
-		opcodeProgram = append(opcodeProgram, mnemonicsToOpcode(line))
-		memoryAddress += memorySize[tokenizedProgram[i][0][0]]
+		line = checkUnexpectedCharacter(line)
+		checkNumberOfArgs(line, i+numberOfBlankLines)
+		tokenizedProgram = append(tokenizedProgram, checkWords(line, i+numberOfBlankLines))
+		//checkSyntax(tokenizedProgram[i], syntaxRules[tokenizedProgram[i][0][0]], i)
+		//labels = checkJumps(tokenizedProgram[i], labels, i, memoryAddress)
+		//memoryAddress += memorySize[tokenizedProgram[i][0][0]]
+	}
+	fmt.Println(assemblerProgram)
+	fmt.Println(tokenizedProgram)
+
+	//tokenizedProgram = delLabels(tokenizedProgram)
+
+	//memoryAddress = 0
+	//var opcodeProgram [][]uint
+	for _, line := range tokenizedProgram {
+		if line[0][0] == "JMP" || line[0][0] == "CALL" {
+			//tokenizedProgram[i] = createJumpAddress(labels, line, memoryAddress)
+		}
+		//opcodeProgram = append(opcodeProgram, mnemonicsToOpcode(line))
+		//memoryAddress += memorySize[tokenizedProgram[i][0][0]]
 	}
 
-	var bytePogram []uint8 = bytificationOfTheProgram(opcodeProgram)
+	//var bytePogram []uint8 = bytificationOfTheProgram(opcodeProgram)
+	var byteProgram []uint8
+	return byteProgram
+}
 
-	return bytePogram
+func isEmpty(line []string) bool {
+	for _, word := range line {
+		if len(word) != 0 {
+			return false
+		}
+	}
+	return true
 }
 
 func cleanEmpty(assemblerProgram [][]string) [][]string {
@@ -237,12 +253,13 @@ func checkWords(line []string, i int) [][]string {
 				newLine = append(newLine, []string{word, "Number1"})
 			} else if line[0] == "MOV" && number > int(-math.Pow(2, 63)) && number < int(math.Pow(2, 63))-1 {
 				newLine = append(newLine, []string{word, "Number8"})
-			} else {
-				err := "Unrecognized token \"" + word + "\" at line " + intToStr(i+1)
-				log.Fatal(err)
 			}
+		} else {
+			err := "Unrecognized token \"" + word + "\" at line " + intToStr(i+1)
+			log.Fatal(err)
 		}
 	}
+	newLine = append(newLine, []string{intToStr(i), "Line"})
 	return newLine
 }
 
@@ -271,8 +288,17 @@ func checkSyntax(line [][]string, rules []string, i int) {
 	}
 }
 
-//err := "Forbiddent label name \"" + string(line[0][0][:len(line[0])-1]) + "\" at line " + intToStr(i)
-//log.Fatal(err)
+func checkJumps(line [][]string, labels map[string]int, i int, memoryAddress int) map[string]int {
+	if line[0][0][len(line[0][0])-1] == ':' {
+		if !(inList(forbiddenLabels, line[0][0][:len(line[0])-1])) {
+			labels[string(line[0][0][:len(line[0])-1])] = memoryAddress - 1
+		} else {
+			err := "Forbiddent label name \"" + string(line[0][0][:len(line[0])-1]) + "\" at line " + intToStr(i)
+			log.Fatal(err)
+		}
+	}
+	return labels
+}
 
 func delLabels(tokenizedProgram [][][]string) [][][]string {
 	var cleanedProgram [][][]string
@@ -485,7 +511,7 @@ func bytificationOfTheProgram(opcodeProgram [][]uint) []uint8 {
 // Execute the program //
 /////////////////////////
 
-func executeProgram(byteProgram []uint8) {
+/* func executeProgram(byteProgram []uint8) {
 	var x int
 	for i := uint32(0); i < uint32(len(byteProgram)); i++ {
 		var debugVariable uint32 = i
@@ -629,7 +655,7 @@ func executeProgram(byteProgram []uint8) {
 		}
 	}
 	fmt.Println(registers, stack, RAM)
-}
+} */
 
 ///////////
 // UTILS //
