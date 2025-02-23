@@ -122,7 +122,7 @@ func main() {
 	fmt.Printf("Temps : %s\n", elapsed)
 
 	startTime = time.Now()
-	//executeProgram(byteProgram)
+	executeProgram(byteProgram)
 	elapsed = time.Since(startTime)
 	fmt.Printf("Temps : %s\n", elapsed)
 }
@@ -151,10 +151,10 @@ func programCleaner(assemblerProgram [][]string) []uint8 {
 	var numberOfBlankLines int
 	assemblerProgram = cleanEmpty(assemblerProgram)
 
-	//var labels = make(map[string]int)
+	var labels = make(map[string]int)
 	var tokenizedProgram [][][]string
 
-	//var memoryAddress int
+	var memoryAddress int
 	for i, line := range assemblerProgram {
 		for isEmpty(assemblerProgramWithBlankLine[i+numberOfBlankLines]) {
 			numberOfBlankLines += 1
@@ -162,27 +162,25 @@ func programCleaner(assemblerProgram [][]string) []uint8 {
 		line = checkUnexpectedCharacter(line)
 		checkNumberOfArgs(line, i+numberOfBlankLines)
 		tokenizedProgram = append(tokenizedProgram, checkWords(line, i+numberOfBlankLines))
-		//checkSyntax(tokenizedProgram[i], syntaxRules[tokenizedProgram[i][0][0]], i)
-		//labels = checkJumps(tokenizedProgram[i], labels, i, memoryAddress)
-		//memoryAddress += memorySize[tokenizedProgram[i][0][0]]
+		labels = checkJumps(tokenizedProgram[i], labels, memoryAddress)
+		checkSyntax(tokenizedProgram[i], syntaxRules[tokenizedProgram[i][0][0]])
+		memoryAddress += memorySize[tokenizedProgram[i][0][0]]
 	}
-	fmt.Println(assemblerProgram)
-	fmt.Println(tokenizedProgram)
 
-	//tokenizedProgram = delLabels(tokenizedProgram)
+	tokenizedProgram = delLabels(tokenizedProgram)
 
-	//memoryAddress = 0
-	//var opcodeProgram [][]uint
-	for _, line := range tokenizedProgram {
+	memoryAddress = 0
+	var opcodeProgram [][]uint
+	for i, line := range tokenizedProgram {
 		if line[0][0] == "JMP" || line[0][0] == "CALL" {
-			//tokenizedProgram[i] = createJumpAddress(labels, line, memoryAddress)
+			tokenizedProgram[i] = createJumpAddress(labels, line, memoryAddress)
 		}
-		//opcodeProgram = append(opcodeProgram, mnemonicsToOpcode(line))
-		//memoryAddress += memorySize[tokenizedProgram[i][0][0]]
+		opcodeProgram = append(opcodeProgram, mnemonicsToOpcode(line))
+		memoryAddress += memorySize[tokenizedProgram[i][0][0]]
 	}
 
-	//var bytePogram []uint8 = bytificationOfTheProgram(opcodeProgram)
-	var byteProgram []uint8
+	var byteProgram []uint8 = bytificationOfTheProgram(opcodeProgram)
+
 	return byteProgram
 }
 
@@ -253,6 +251,9 @@ func checkWords(line []string, i int) [][]string {
 				newLine = append(newLine, []string{word, "Number1"})
 			} else if line[0] == "MOV" && number > int(-math.Pow(2, 63)) && number < int(math.Pow(2, 63))-1 {
 				newLine = append(newLine, []string{word, "Number8"})
+			} else {
+				err := "Unrecognized token \"" + word + "\" at line " + intToStr(i+1)
+				log.Fatal(err)
 			}
 		} else {
 			err := "Unrecognized token \"" + word + "\" at line " + intToStr(i+1)
@@ -263,8 +264,21 @@ func checkWords(line []string, i int) [][]string {
 	return newLine
 }
 
-func checkSyntax(line [][]string, rules []string, i int) {
+func checkJumps(line [][]string, labels map[string]int, memoryAddress int) map[string]int {
+	if line[0][0][len(line[0][0])-1] == ':' {
+		if !(inList(forbiddenLabels, line[0][0][:len(line[0][0])-1])) {
+			labels[string(line[0][0][:len(line[0][0])-1])] = memoryAddress - 1
+		} else {
+			err := "Forbiddent label name \"" + string(line[0][0][:len(line[0][0])-1]) + "\" at line " + intToStr(strToInt(string(line[1][0]))+1)
+			log.Fatal(err)
+		}
+	}
+	return labels
+}
+
+func checkSyntax(line [][]string, rules []string) {
 	var errorSyntax bool = false
+	var numberLine int
 	for j, rule := range rules {
 		if rule == "Register" && line[j+1][1] != "Register" {
 			errorSyntax = true
@@ -281,23 +295,13 @@ func checkSyntax(line [][]string, rules []string, i int) {
 		} else if rule == "Number8" && line[j+1][1] != "Number8" {
 			errorSyntax = true
 		}
+		numberLine = j
 	}
 	if errorSyntax == true {
-		err := "Syntax error at line " + intToStr(i+1)
+		fmt.Println(line)
+		err := "Syntax error at line " + intToStr(strToInt(string(line[numberLine+2][0][0]))+1)
 		log.Fatal(err)
 	}
-}
-
-func checkJumps(line [][]string, labels map[string]int, i int, memoryAddress int) map[string]int {
-	if line[0][0][len(line[0][0])-1] == ':' {
-		if !(inList(forbiddenLabels, line[0][0][:len(line[0])-1])) {
-			labels[string(line[0][0][:len(line[0])-1])] = memoryAddress - 1
-		} else {
-			err := "Forbiddent label name \"" + string(line[0][0][:len(line[0])-1]) + "\" at line " + intToStr(i)
-			log.Fatal(err)
-		}
-	}
-	return labels
 }
 
 func delLabels(tokenizedProgram [][][]string) [][][]string {
@@ -316,7 +320,7 @@ func createJumpAddress(labels map[string]int, line [][]string, memoryAdress int)
 		err := "Undefined label \"" + line[1][0] + "\""
 		log.Fatal(err)
 	}
-	line[1][0] = intToStr(targetLine - memoryAdress - 1)
+	line[1][0] = intToStr(targetLine - memoryAdress)
 	return line
 }
 
@@ -449,7 +453,7 @@ func bytificationOfTheProgram(opcodeProgram [][]uint) []uint8 {
 		case uint(ADDI):
 			byteProgram = append(byteProgram, uint8(ADDI))
 			byteProgram = append(byteProgram, uint8(line[1]))
-			byteProgram = append(byteProgram, uint8(line[2]))
+			byteProgram = append(byteProgram, uint8(line[2]&255))
 		case uint(PUSH):
 			byteProgram = append(byteProgram, uint8(PUSH))
 			byteProgram = append(byteProgram, uint8(line[1]))
@@ -511,42 +515,43 @@ func bytificationOfTheProgram(opcodeProgram [][]uint) []uint8 {
 // Execute the program //
 /////////////////////////
 
-/* func executeProgram(byteProgram []uint8) {
-	var x int
+func executeProgram(byteProgram []uint8) {
 	for i := uint32(0); i < uint32(len(byteProgram)); i++ {
 		var debugVariable uint32 = i
 		switch byteProgram[i] {
 		case uint8(HLT):
 			break
 		case uint8(RET):
-			fmt.Println(i, opcodeToMnemonics[byteProgram[i]], registers, stack, RAM)
-			i = stack[len(stack)-1]
-			stack = stack[:len(stack)-1]
+			fmt.Println(i, opcodeToMnemonics[int(byteProgram[i])], registers, stack, RAM)
+			var newAddress uint32
+			for j := range 4 {
+				newAddress += uint32(stack[len(stack)-1-3+j] << (8 * j))
+			}
+			i = newAddress
+			stack = stack[:len(stack)-4]
 		case uint8(MOV):
 			var arg1 uint8 = byteProgram[i+1]
 			var arg2 uint64
 			for j := range 8 {
-				arg2 += uint64(byteProgram[i+2+j] << (8 * j))
+				arg2 += uint64(byteProgram[i+2+uint32(j)] << (8 * j))
 			}
 			registers[arg1] = arg2
-			i += memorySize[opcodeToMnemonics[MOV]] - 1
+			i += uint32(memorySize[opcodeToMnemonics[MOV]] - 1)
 		case uint8(ADD):
 			var arg1 uint8 = byteProgram[i+1]
 			var arg2 uint8 = byteProgram[i+2]
 			registers[arg1] = registers[arg1] + registers[arg2]
-			i += memorySize[opcodeToMnemonics[ADD]] - 1
+			i += uint32(memorySize[opcodeToMnemonics[ADD]] - 1)
 		case uint8(ADDI):
 			var arg1 uint8 = byteProgram[i+1]
 			var arg2 uint8 = byteProgram[i+2]
 			registers[arg1] += uint64(arg2)
-			i += memorySize[opcodeToMnemonics[ADDI]] - 1
+			i += uint32(memorySize[opcodeToMnemonics[ADDI]] - 1)
 		case uint8(PUSH):
-			///////////////////////////////
-			////////////////////////////////
-			///////////////////////////////
-			// TO DO : stack is in the RAM, so it only has 8bits by 8bits of memory
 			var arg uint8 = byteProgram[i+1]
-			stack = append(stack, registers[arg])
+			for j := range 8 {
+				stack = append(stack, registers[arg]>>(8))
+			}
 			i += memorySize[opcodeToMnemonics[PUSH]] - 1
 		case uint8(POP):
 			///////////////////////////////
@@ -649,13 +654,9 @@ func bytificationOfTheProgram(opcodeProgram [][]uint) []uint8 {
 			}
 		}
 		fmt.Println(debugVariable, opcodeToMnemonics[byteProgram[debugVariable]], registers, stack, RAM)
-		x += 1
-		if x > 30 {
-			break
-		}
 	}
 	fmt.Println(registers, stack, RAM)
-} */
+}
 
 ///////////
 // UTILS //
