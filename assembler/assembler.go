@@ -555,8 +555,6 @@ func executeProgram(byteProgram []uint8) {
 			i += memorySize[opcodeToMnemonics[PUSH]] - 1
 		case uint8(POP):
 			///////////////////////////////
-			////////////////////////////////
-			///////////////////////////////
 			// TO DO : stack is in the RAM, so it only has 8bits by 8bits of memory
 			var arg int = byteProgram[i+1]
 			registers[arg] = stack[len(stack)-1]
