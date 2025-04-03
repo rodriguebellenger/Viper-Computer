@@ -13,8 +13,7 @@ For the moment, you have the assembly interpreter.
 | **HLT**    | Stops the program no matter what.                                                                                |
 | **CALL**   | Jump to the address of the label, and push the current address onto the stack.                                   |
 | **RET**    | Return to the address at the top of the stack.                                                                   |
-| **MOV**    | Move the number to the register specified (see registers section).
-The number is 64 bits.|
+| **MOV**    | Move the number to the register specified (see registers section). The number is 64 bits.                        |
 | **ADD**    | Add the content of two registers and put the result back in the first one.                                       |
 | **ADDI**   | Add an immediate to a register (immediate is 8 bits).                                                            |
 | **PUSH**   | Push the content of a register onto the stack.                                                                   |
