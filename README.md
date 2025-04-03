@@ -8,7 +8,7 @@ For the moment, you have the assembly interpreter.
 
 ## Operations
 
-| Name       | Arg 1 | None  | None  | Effect                                                                                                   |
+| Name       | Arg 1 | Arg 2 | Arg 3 | Effect                                                                                                   |
 | ---------- | ----- | ----- | ----- | -------------------------------------------------------------------------------------------------------- |
 | **HLT**    | None  | None  | None  | Stops the program no matter what.                                                                        |
 | **CALL**   | Label | None  | None  | Jump to the address of the label, and push the current address onto the stack.                           |
