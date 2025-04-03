@@ -517,6 +517,8 @@ func bytificationOfTheProgram(opcodeProgram [][]uint64) []uint8 {
 // Execute the program //
 /////////////////////////
 
+// Test push
+
 func executeProgram(byteProgram []uint8) {
 	for i := uint32(0); i < uint32(len(byteProgram)); i++ {
 		var debugVariable uint32 = i
