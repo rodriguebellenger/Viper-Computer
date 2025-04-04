@@ -517,8 +517,6 @@ func bytificationOfTheProgram(opcodeProgram [][]uint64) []uint8 {
 // Execute the program //
 /////////////////////////
 
-// Test push
-
 func executeProgram(byteProgram []uint8) {
 	var x int = 0
 	for i := uint32(0); i < uint32(len(byteProgram)); i++ {
@@ -557,7 +555,7 @@ func executeProgram(byteProgram []uint8) {
 		case uint8(ADDI):
 			var arg1 uint8 = byteProgram[i+1]
 			var arg2 uint64 = uint64(byteProgram[i+2])
-			registers[arg1] += uint64(arg2) | 18446744073709551615
+			registers[arg1] += uint64(arg2 | 0xFFFFFFFFFFFFFF00)
 			i += uint32(memorySize[opcodeToMnemonics[ADDI]] - 1)
 		case uint8(PUSH):
 			var arg uint8 = byteProgram[i+1]
@@ -599,12 +597,13 @@ func executeProgram(byteProgram []uint8) {
 			var arg3 uint8 = byteProgram[i+3]
 			switch arg3 {
 			case 1:
+				// TO DO : verification for signed integer (for now, it only checks as if it were unsigned)
 				if !(registers[arg1] < registers[arg2]) {
 					i += uint32(memorySize[opcodeToMnemonics[int(RAM[int(i+uint32(memorySize[opcodeToMnemonics[CMP]]))])]])
 				}
 			case 2:
 				if !(registers[arg1] > registers[arg2]) {
-					fmt.Println(uint32(memorySize[opcodeToMnemonics[int(RAM[int(i+uint32(memorySize[opcodeToMnemonics[CMP]]))])]]))
+					fmt.Println(opcodeToMnemonics[int(RAM[int(i+uint32(memorySize[opcodeToMnemonics[CMP]]))])])
 					i += uint32(memorySize[opcodeToMnemonics[int(RAM[int(i+uint32(memorySize[opcodeToMnemonics[CMP]]))])]])
 				}
 			case 3:
@@ -664,7 +663,7 @@ func executeProgram(byteProgram []uint8) {
 		case uint8(CALL):
 
 		}
-		fmt.Println(debugVariable, opcodeToMnemonics[int(byteProgram[debugVariable])], registers)
+		fmt.Println(debugVariable, int(byteProgram[debugVariable]), opcodeToMnemonics[int(byteProgram[debugVariable])], registers)
 		if x > 100 {
 			break
 		}
