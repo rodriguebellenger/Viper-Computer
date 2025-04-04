@@ -18,7 +18,7 @@ var mnemonics []string = []string{"MOV", "ADDI", "ADD", "AND", "OR", "NOT", "PUS
 var registersName []string = []string{"R0", "R1", "R2", "R3", "R4", "R5", "R6", "R7", "R8", "R9", "R10", "R11", "R12", "R13", "R14", "R15"}
 var registers []uint64 = []uint64{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 
-const RAMSize int = 255
+const RAMSize int = 512
 
 var RAM [RAMSize]uint8
 var stackPointer uint32 = uint32(RAMSize) - 1
@@ -126,7 +126,7 @@ func main() {
 	fmt.Printf("Temps : %s\n", elapsed)
 
 	startTime = time.Now()
-	//executeProgram(byteProgram)
+	executeProgram(byteProgram)
 	elapsed = time.Since(startTime)
 	fmt.Printf("Temps : %s\n", elapsed)
 }
@@ -518,7 +518,9 @@ func bytificationOfTheProgram(opcodeProgram [][]uint64) []uint8 {
 /////////////////////////
 
 func executeProgram(byteProgram []uint8) {
+	var x int = 0
 	for i := uint32(0); i < uint32(len(byteProgram)); i++ {
+		x += 1
 		var debugVariable uint32 = i
 		switch byteProgram[i] {
 		case uint8(HLT):
@@ -532,6 +534,9 @@ func executeProgram(byteProgram []uint8) {
 			stackPointer -= 8
 			for i := range 4 {
 				newAddress += uint32(RAM[stackPointer+uint32(i)] << (8 * i))
+			}
+			if registers[newAddress] < 0 || registers[newAddress] >= uint64(RAMSize) {
+				log.Fatal("Address out of bounds")
 			}
 			i = newAddress
 		case uint8(MOV):
@@ -549,38 +554,43 @@ func executeProgram(byteProgram []uint8) {
 			i += uint32(memorySize[opcodeToMnemonics[ADD]] - 1)
 		case uint8(ADDI):
 			var arg1 uint8 = byteProgram[i+1]
-			var arg2 uint8 = byteProgram[i+2]
-			registers[arg1] += uint64(arg2)
-			registers[arg1] &= 18446744073709551615
+			var arg2 uint64 = uint64(byteProgram[i+2])
+			registers[arg1] += uint64(arg2) | 18446744073709551615
 			i += uint32(memorySize[opcodeToMnemonics[ADDI]] - 1)
 		case uint8(PUSH):
 			var arg uint8 = byteProgram[i+1]
-			if
-			for j := range 8 {
-				RAM[stackPointer+uint32(j)] = uint8(registers[arg] >> (8))
+			if stackPointer >= uint32(RAMSize-RAMSize/4-1) {
+				log.Fatal("Stack overflow (but not the website unfortunately)")
 			}
+			for j := range 8 {
+				RAM[stackPointer-uint32(j)] = uint8(registers[arg] >> (8 * j))
+			}
+			stackPointer -= 8
 			i += uint32(memorySize[opcodeToMnemonics[PUSH]] - 1)
 		case uint8(POP):
-			///////////////////////////////
-			// TO DO : stack is in the RAM, so it only has 8bits by 8bits of memory
-			var arg int = byteProgram[i+1]
-			registers[arg] = stack[len(stack)-1]
-			stack = stack[:len(stack)-1]
-			i += memorySize[opcodeToMnemonics[POP]] - 1
+			var arg uint8 = byteProgram[i+1]
+			if stackPointer <= uint32(RAMSize-1) {
+				log.Fatal("Stack underflow")
+			}
+			stackPointer += 8
+			for j := range 8 {
+				registers[arg] += uint64(RAM[stackPointer-uint32(j)] << (8 * j))
+			}
+			i += uint32(memorySize[opcodeToMnemonics[POP]] - 1)
 		case uint8(AND):
 			var arg1 uint8 = byteProgram[i+1]
 			var arg2 uint8 = byteProgram[i+2]
 			registers[arg1] = registers[arg1] & registers[arg2]
-			i += memorySize[opcodeToMnemonics[AND]] - 1
+			i += uint32(memorySize[opcodeToMnemonics[AND]] - 1)
 		case uint8(OR):
 			var arg1 uint8 = byteProgram[i+1]
 			var arg2 uint8 = byteProgram[i+2]
 			registers[arg1] = registers[arg1] | registers[arg2]
-			i += memorySize[opcodeToMnemonics[OR]] - 1
+			i += uint32(memorySize[opcodeToMnemonics[OR]] - 1)
 		case uint8(NOT):
 			var arg uint8 = byteProgram[i+1]
 			registers[arg] = ^registers[arg]
-			i += memorySize[opcodeToMnemonics[NOT]] - 1
+			i += uint32(memorySize[opcodeToMnemonics[NOT]] - 1)
 		case uint8(CMP):
 			var arg1 uint8 = byteProgram[i+1]
 			var arg2 uint8 = byteProgram[i+2]
@@ -588,79 +598,76 @@ func executeProgram(byteProgram []uint8) {
 			switch arg3 {
 			case 1:
 				if !(registers[arg1] < registers[arg2]) {
-					i += memorySize[opcodeToMnemonics[i+memorySize[opcodeToMnemonics[CMP]]]]
+					i += uint32(memorySize[opcodeToMnemonics[int(RAM[int(i+uint32(memorySize[opcodeToMnemonics[CMP]]))])]])
 				}
 			case 2:
 				if !(registers[arg1] > registers[arg2]) {
-					i += memorySize[opcodeToMnemonics[i+memorySize[opcodeToMnemonics[CMP]]]]
-					fmt.Println("incr i")
-				} else {
-					fmt.Println("not incr i")
+					fmt.Println(uint32(memorySize[opcodeToMnemonics[int(RAM[int(i+uint32(memorySize[opcodeToMnemonics[CMP]]))])]]))
+					i += uint32(memorySize[opcodeToMnemonics[int(RAM[int(i+uint32(memorySize[opcodeToMnemonics[CMP]]))])]])
 				}
 			case 3:
 				if registers[arg1] != registers[arg2] {
-					i += memorySize[opcodeToMnemonics[i+memorySize[opcodeToMnemonics[CMP]]]]
+					i += uint32(memorySize[opcodeToMnemonics[int(RAM[int(i+uint32(memorySize[opcodeToMnemonics[CMP]]))])]])
 				}
 			}
-			//fmt.Println(i)
-			//fmt.Println(memorySize[opcodeToMnemonics[CMP]] - 1)
-			i += memorySize[opcodeToMnemonics[CMP]] - 1
-			//fmt.Println(i)
+			//fmt.Println(uint32(memorySize[opcodeToMnemonics[CMP]] - 1))
+			i += uint32(memorySize[opcodeToMnemonics[CMP]] - 1)
 		case uint8(JMP):
 			var offset uint32
 			for j := 0; j < 4; j++ {
-				offset += uint32(byteProgram[i+1+j]) << (8 * j)
+				offset += uint32(byteProgram[i+uint32(1+j)]) << (8 * j)
 			}
-
-			if offset > 0 {
-				i = int(uint32(i) + offset + 4)
+			if offset>>31 == 1 {
+				i += offset
 			} else {
-				i = i + offset
+				i += offset
 			}
 		case uint8(WRT):
 			var arg1 uint8 = byteProgram[i+1]
 			var arg2 uint8 = byteProgram[i+2]
+			if registers[arg2] <= uint64(RAMSize/4-1) {
+				log.Fatal("You cannot modify the program while running")
+			} else if registers[arg2] < 0 || registers[arg2] >= uint64(RAMSize) {
+				log.Fatal("Address out of bounds")
+			}
 			var arg3 uint8 = byteProgram[i+3]
 			var numberToStore uint64 = registers[arg3]
 			var bytes uint8
-			for i := range arg1 {
+			for j := range arg1 {
 				bytes = uint8(numberToStore & 255)
-				RAM[registers[arg2]+uint64(i)] = bytes
+				RAM[registers[arg2]+uint64(j)] = bytes
 				numberToStore = numberToStore >> 8
 			}
-			i += memorySize[opcodeToMnemonics[WRT]] - 1
+			i += uint32(memorySize[opcodeToMnemonics[WRT]] - 1)
 		case uint8(READ):
 			var arg1 uint8 = byteProgram[i+1]
 			var arg2 uint8 = byteProgram[i+2]
 			var arg3 uint8 = byteProgram[i+3]
+			if registers[arg3] < 0 || registers[arg3] >= uint64(RAMSize) {
+				log.Fatal("Address out of bounds")
+			}
 			var storedNumber uint64 = 0
 			for j := 0; uint8(j) < arg2; j++ {
 				storedNumber += uint64(RAM[registers[arg3]+uint64(j)] << (8 * j))
 			}
 			registers[arg1] = storedNumber
-			i += memorySize[opcodeToMnemonics[READ]] - 1
+			i += uint32(memorySize[opcodeToMnemonics[READ]] - 1)
 		case uint8(SWAP):
 			var arg1 uint8 = byteProgram[i+1]
 			var arg2 uint8 = byteProgram[i+2]
 			intermediateVariable := registers[arg1]
 			registers[arg1] = registers[arg2]
 			registers[arg2] = intermediateVariable
-			i += memorySize[opcodeToMnemonics[SWAP]] - 1
+			i += uint32(memorySize[opcodeToMnemonics[SWAP]] - 1)
 		case uint8(CALL):
-			stack = append(stack, i)
-			var offset uint32
-			for j := 0; j < 4; j++ {
-				offset += uint32(byteProgram[i+1+j]) << (8 * j)
-			}
-			if offset > 0 {
-				i = i + offset + 4
-			} else {
-				i = i + offset
-			}
+
 		}
-		fmt.Println(debugVariable, opcodeToMnemonics[byteProgram[debugVariable]], registers, stack, RAM)
+		fmt.Println(debugVariable, opcodeToMnemonics[int(byteProgram[debugVariable])], registers)
+		if x > 100 {
+			break
+		}
 	}
-	fmt.Println(registers, stack, RAM)
+	fmt.Println(registers, RAM)
 }
 
 ///////////
