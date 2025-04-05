@@ -18,7 +18,7 @@ var mnemonics []string = []string{"MOV", "ADDI", "ADD", "AND", "OR", "NOT", "PUS
 var registersName []string = []string{"R0", "R1", "R2", "R3", "R4", "R5", "R6", "R7", "R8", "R9", "R10", "R11", "R12", "R13", "R14", "R15"}
 var registers []uint64 = []uint64{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 
-const RAMSize int = 512
+const RAMSize int = 256
 
 var RAM [RAMSize]uint8
 var stackPointer uint32 = uint32(RAMSize) - 1
@@ -122,11 +122,11 @@ func main() {
 	var byteProgram []uint8 = programCleaner(assemblerProgram)
 	var elapsed time.Duration = time.Since(startTime)
 	fmt.Println(byteProgram)
-	fmt.Println(len(byteProgram))
 	fmt.Printf("Temps : %s\n", elapsed)
+	fmt.Println()
 
 	writeToRAM(byteProgram)
-	fmt.Println(RAM)
+	//fmt.Println(RAM)
 
 	startTime = time.Now()
 	executeProgram()
@@ -533,7 +533,7 @@ func writeToRAM(byteProgram []uint8) {
 func executeProgram() {
 loop:
 	for i := uint32(0); i < uint32(RAMSize/4); i++ {
-		//var debugVariable uint32 = i
+		var debugVariable uint32 = i
 		switch RAM[i] {
 		case uint8(HLT):
 			break loop
@@ -543,51 +543,11 @@ loop:
 			}
 			var newAddress uint32
 			stackPointer -= 8
-			for i := range 4 {
-				newAddress += uint32(RAM[stackPointer+uint32(i)] << (8 * i))
-			}
+			newAddress = uint32(RAM[stackPointer+0]) | uint32(RAM[stackPointer+1])<<8 | uint32(RAM[stackPointer+2])<<16 | uint32(RAM[stackPointer+3])<<24
 			if registers[newAddress] < 0 || registers[newAddress] >= uint64(RAMSize) {
 				log.Fatal("Address out of bounds")
 			}
 			i = newAddress
-		case uint8(MOV):
-			var arg1 uint8 = RAM[i+1]
-			var arg2 uint64
-			for j := range 8 {
-				arg2 += uint64(RAM[i+2+uint32(j)]) << (8 * j)
-			}
-			registers[arg1] = arg2
-			i += 9
-		case uint8(ADD):
-			var arg1 uint8 = RAM[i+1]
-			var arg2 uint8 = RAM[i+2]
-			registers[arg1] = (registers[arg1] + registers[arg2])
-			i += 2
-		case uint8(ADDI):
-			var arg1 uint8 = RAM[i+1]
-			var arg2 uint64 = uint64(RAM[i+2])
-			registers[arg1] += arg2 | 0xFFFFFFFFFFFFFF00
-			i += 2
-		case uint8(PUSH):
-			var arg uint8 = RAM[i+1]
-			if stackPointer >= uint32(RAMSize-RAMSize/4-1) {
-				log.Fatal("Stack overflow (but not the website unfortunately)")
-			}
-			for j := range 8 {
-				RAM[stackPointer-uint32(j)] = uint8(registers[arg] >> (8 * j))
-			}
-			stackPointer -= 8
-			i += 1
-		case uint8(POP):
-			var arg uint8 = RAM[i+1]
-			if stackPointer <= uint32(RAMSize-1) {
-				log.Fatal("Stack underflow")
-			}
-			stackPointer += 8
-			for j := range 8 {
-				registers[arg] += uint64(RAM[stackPointer-uint32(j)] << (8 * j))
-			}
-			i += 1
 		case uint8(AND):
 			var arg1 uint8 = RAM[i+1]
 			var arg2 uint8 = RAM[i+2]
@@ -601,6 +561,48 @@ loop:
 		case uint8(NOT):
 			var arg uint8 = RAM[i+1]
 			registers[arg] = ^registers[arg]
+			i += 1
+		case uint8(ADD):
+			var arg1 uint8 = RAM[i+1]
+			var arg2 uint8 = RAM[i+2]
+			registers[arg1] = (registers[arg1] + registers[arg2])
+			i += 2
+		case uint8(ADDI):
+			var arg1 uint8 = RAM[i+1]
+			var arg2 uint64 = uint64(RAM[i+2])
+			registers[arg1] += arg2 | 0xFFFFFFFFFFFFFF00
+			i += 2
+		case uint8(MOV):
+			var arg1 uint8 = RAM[i+1]
+			var arg2 uint64
+			for j := range 8 {
+				arg2 += uint64(RAM[i+2+uint32(j)]) << (8 * j)
+			}
+			arg2 = uint64(RAM[i+2]) | uint64(RAM[i+3])<<8 | uint64(RAM[i+4])<<16 | uint64(RAM[i+5])<<24 |
+				uint64(RAM[i+6])<<32 | uint64(RAM[i+7])<<40 | uint64(RAM[i+8])<<48 | uint64(RAM[i+9])<<56
+			registers[arg1] = arg2
+			i += 9
+		case uint8(PUSH):
+			var arg uint8 = RAM[i+1]
+			if stackPointer <= uint32(RAMSize-(RAMSize>>2)-1) {
+				log.Fatal("Stack overflow (but not the website unfortunately)")
+			}
+			for j := range 8 {
+				RAM[stackPointer-uint32(j)] = uint8(registers[arg] >> (8 * j))
+			}
+			stackPointer -= 8
+			i += 1
+		case uint8(POP):
+			var arg uint8 = RAM[i+1]
+			if stackPointer >= uint32(RAMSize-1) {
+				log.Fatal("Stack underflow")
+			}
+			stackPointer += 8
+			var number uint64
+			for j := range 8 {
+				number += uint64(RAM[stackPointer-uint32(j)]) << (8 * j)
+			}
+			registers[arg] = number
 			i += 1
 		case uint8(CMP):
 			var arg1 uint8 = RAM[i+1]
@@ -623,9 +625,7 @@ loop:
 			i += 3
 		case uint8(JMP):
 			var offset uint32
-			for j := range 4 {
-				offset += uint32(RAM[i+uint32(1+j)]) << (8 * j)
-			}
+			offset = uint32(RAM[i+1]) | uint32(RAM[i+2])<<8 | uint32(RAM[i+3])<<16 | uint32(RAM[i+4])<<24
 			i += offset
 		case uint8(WRT):
 			var arg1 uint8 = RAM[i+1]
@@ -667,10 +667,16 @@ loop:
 		case uint8(CALL):
 
 		}
-		//fmt.Println(debugVariable, opcodeToMnemonics[int(RAM[debugVariable])], registers)
+		fmt.Println(debugVariable, opcodeToMnemonics[int(RAM[debugVariable])], registers, stackPointer)
+		fmt.Println(RAM[3*(RAMSize>>2):])
 	}
+	fmt.Println()
 	fmt.Println(registers, RAM)
 }
+
+////////////
+// Errors //
+////////////
 
 ///////////
 // UTILS //
