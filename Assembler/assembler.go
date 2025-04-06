@@ -18,7 +18,7 @@ var mnemonics []string = []string{"MOV", "ADDI", "ADD", "AND", "OR", "NOT", "PUS
 var registersName []string = []string{"R0", "R1", "R2", "R3", "R4", "R5", "R6", "R7", "R8", "R9", "R10", "R11", "R12", "R13", "R14", "R15"}
 var registers []uint64 = []uint64{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 
-const RAMSize int = 256
+const RAMSize int = 512
 
 var RAM [RAMSize]uint8
 var stackPointer uint32 = uint32(RAMSize) - 1
@@ -570,7 +570,11 @@ loop:
 		case uint8(ADDI):
 			var arg1 uint8 = RAM[i+1]
 			var arg2 uint64 = uint64(RAM[i+2])
-			registers[arg1] += arg2 | 0xFFFFFFFFFFFFFF00
+			if arg2>>7 == 1 {
+				registers[arg1] += arg2 | 0xFFFFFFFFFFFFFF00
+			} else {
+				registers[arg1] += arg2
+			}
 			i += 2
 		case uint8(MOV):
 			var arg1 uint8 = RAM[i+1]
@@ -669,6 +673,7 @@ loop:
 		}
 		fmt.Println(debugVariable, opcodeToMnemonics[int(RAM[debugVariable])], registers, stackPointer)
 		fmt.Println(RAM[3*(RAMSize>>2):])
+		fmt.Println(RAM[RAMSize>>2 : RAMSize-(RAMSize>>2)])
 	}
 	fmt.Println()
 	fmt.Println(registers, RAM)
