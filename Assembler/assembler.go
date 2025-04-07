@@ -18,7 +18,7 @@ var mnemonics []string = []string{"MOV", "ADDI", "ADD", "AND", "OR", "NOT", "PUS
 var registersName []string = []string{"R0", "R1", "R2", "R3", "R4", "R5", "R6", "R7", "R8", "R9", "R10", "R11", "R12", "R13", "R14", "R15"}
 var registers []uint64 = []uint64{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 
-const RAMSize int = 512
+const RAMSize int = 1024
 
 var RAM [RAMSize]uint8
 var stackPointer uint32 = uint32(RAMSize) - 1
@@ -247,7 +247,7 @@ func checkWords(line []string, i int) [][]string {
 		} else if inList(registersName, word) {
 			newLine = append(newLine, []string{word[1:], "Register"})
 		} else if word[0] == '@' && isInt(word[1:]) && isPowerOfTwo(strToInt(word[1:])) && strToInt(word[1:]) >= 8 {
-			newLine = append(newLine, []string{intToStr(exponentOfPowerOfTwo(strToInt(word[1:])) - 2), "Size"})
+			newLine = append(newLine, []string{intToStr(strToInt(word[1:]) / 8), "Size"})
 		} else if word[0] == '*' && inList(registersName, word[1:]) {
 			newLine = append(newLine, []string{word[2:], "Address"})
 		} else if isInt(word) {
@@ -542,11 +542,13 @@ loop:
 				log.Fatal("Cannot return because stack is empty at memory address : " + intToStr(int(i)))
 			}
 			var newAddress uint32
-			stackPointer -= 8
-			newAddress = uint32(RAM[stackPointer+0]) | uint32(RAM[stackPointer+1])<<8 | uint32(RAM[stackPointer+2])<<16 | uint32(RAM[stackPointer+3])<<24
-			if registers[newAddress] < 0 || registers[newAddress] >= uint64(RAMSize) {
+			stackPointer += 8
+			newAddress = uint32(RAM[stackPointer]) | uint32(RAM[stackPointer-1])<<8 | uint32(RAM[stackPointer-2])<<16 | uint32(RAM[stackPointer-3])<<24
+			if newAddress < 0 || newAddress >= uint32(RAMSize) {
 				log.Fatal("Address out of bounds")
 			}
+			//fmt.Println(newAddress)
+			//fmt.Println(uint16(RAM[stackPointer]), uint16(RAM[stackPointer-1]))
 			i = newAddress
 		case uint8(AND):
 			var arg1 uint8 = RAM[i+1]
@@ -657,7 +659,7 @@ loop:
 			}
 			var storedNumber uint64 = 0
 			for j := 0; uint8(j) < arg2; j++ {
-				storedNumber += uint64(RAM[registers[arg3]+uint64(j)] << (8 * j))
+				storedNumber += uint64(RAM[registers[arg3]+uint64(j)]) << (8 * j)
 			}
 			registers[arg1] = storedNumber
 			i += 3
@@ -669,14 +671,24 @@ loop:
 			registers[arg2] = intermediateVariable
 			i += 2
 		case uint8(CALL):
-
+			if stackPointer <= uint32(RAMSize-(RAMSize>>2)-1) {
+				log.Fatal("Stack overflow (but not the website unfortunately)")
+			}
+			for j := range 8 {
+				RAM[stackPointer-uint32(j)] = uint8(((stackPointer + 4) >> (8 * j)) & 255)
+			}
+			stackPointer -= 8
+			var offset uint32
+			offset = uint32(RAM[i+1]) | uint32(RAM[i+2])<<8 | uint32(RAM[i+3])<<16 | uint32(RAM[i+4])<<24
+			i += offset
 		}
 		fmt.Println(debugVariable, opcodeToMnemonics[int(RAM[debugVariable])], registers, stackPointer)
 		fmt.Println(RAM[3*(RAMSize>>2):])
 		fmt.Println(RAM[RAMSize>>2 : RAMSize-(RAMSize>>2)])
 	}
 	fmt.Println()
-	fmt.Println(registers, RAM)
+	fmt.Println(registers)
+	fmt.Println(RAM)
 }
 
 ////////////
