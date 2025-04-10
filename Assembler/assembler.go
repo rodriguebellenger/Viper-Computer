@@ -522,8 +522,11 @@ func writeToRAM(byteProgram []uint8) {
 /////////////////////////
 
 func executeProgram() {
+	var executionUpperBound uint32 = uint32(RAMSize >> 4)
+	var stackUpperBound uint32 = uint32(RAMSize - (RAMSize >> 2) - 1)
+	var stackLowerBound uint32 = uint32(RAMSize - 1)
 loop:
-	for i := uint32(0); i < uint32(RAMSize/4); i++ {
+	for i := uint32(0); i < executionUpperBound; i++ {
 		//var debugVariable uint32 = i
 		switch RAM[i] {
 		case uint8(HLT):
@@ -535,7 +538,7 @@ loop:
 			var newAddress uint32
 			stackPointer += 8
 			newAddress = uint32(RAM[stackPointer]) | uint32(RAM[stackPointer-1])<<8 | uint32(RAM[stackPointer-2])<<16 | uint32(RAM[stackPointer-3])<<24
-			if newAddress < 0 || newAddress >= uint32(RAMSize) {
+			if newAddress < 0 || newAddress > executionUpperBound {
 				log.Fatal("Address out of bounds")
 			}
 			i = newAddress
@@ -570,16 +573,13 @@ loop:
 		case uint8(MOV):
 			var arg1 uint8 = RAM[i+1]
 			var arg2 uint64
-			for j := range 8 {
-				arg2 += uint64(RAM[i+2+uint32(j)]) << (8 * j)
-			}
 			arg2 = uint64(RAM[i+2]) | uint64(RAM[i+3])<<8 | uint64(RAM[i+4])<<16 | uint64(RAM[i+5])<<24 |
 				uint64(RAM[i+6])<<32 | uint64(RAM[i+7])<<40 | uint64(RAM[i+8])<<48 | uint64(RAM[i+9])<<56
 			registers[arg1] = arg2
 			i += 9
 		case uint8(PUSH):
 			var arg uint8 = RAM[i+1]
-			if stackPointer <= uint32(RAMSize-(RAMSize>>2)-1) {
+			if stackPointer <= stackUpperBound {
 				log.Fatal("Stack overflow (but not the website unfortunately)")
 			}
 			for j := range 8 {
@@ -589,7 +589,7 @@ loop:
 			i += 1
 		case uint8(POP):
 			var arg uint8 = RAM[i+1]
-			if stackPointer >= uint32(RAMSize-1) {
+			if stackPointer >= stackLowerBound {
 				log.Fatal("Stack underflow")
 			}
 			stackPointer += 8
@@ -625,9 +625,9 @@ loop:
 		case uint8(WRT):
 			var arg1 uint8 = RAM[i+1]
 			var arg2 uint8 = RAM[i+2]
-			if registers[arg2] <= uint64(RAMSize/4-1) {
+			if registers[arg2] <= uint64(executionUpperBound) {
 				log.Fatal("You cannot modify the program while running")
-			} else if registers[arg2] < 0 || registers[arg2] >= uint64(RAMSize) {
+			} else if registers[arg2] < 0 || registers[arg2] > uint64(RAMSize) {
 				log.Fatal("Address out of bounds")
 			}
 			var arg3 uint8 = RAM[i+3]
@@ -643,7 +643,7 @@ loop:
 			var arg1 uint8 = RAM[i+1]
 			var arg2 uint8 = RAM[i+2]
 			var arg3 uint8 = RAM[i+3]
-			if registers[arg3] < 0 || registers[arg3] >= uint64(RAMSize) {
+			if registers[arg3] < 0 || registers[arg3] > uint64(RAMSize) {
 				log.Fatal("Address out of bounds")
 			}
 			var storedNumber uint64 = 0
@@ -660,7 +660,7 @@ loop:
 			registers[arg2] = intermediateVariable
 			i += 2
 		case uint8(CALL):
-			if stackPointer <= uint32(RAMSize-(RAMSize>>2)-1) {
+			if stackPointer <= stackUpperBound {
 				log.Fatal("Stack overflow (but not the website unfortunately)")
 			}
 			for j := range 4 {
