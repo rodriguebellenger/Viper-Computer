@@ -23,6 +23,8 @@ const RAMSize int = 1024
 var RAM [RAMSize]uint8
 var stackPointer uint32 = uint32(RAMSize) - 1
 
+var compileTimeBug []string
+
 const (
 	HLT int = iota
 	RET
@@ -176,16 +178,26 @@ func programCleaner(assemblerProgram [][]string) []uint8 {
 	tokenizedProgram = delLabels(tokenizedProgram)
 
 	memoryAddress = 0
-	var opcodeProgram [][]uint64
 	for i, line := range tokenizedProgram {
 		if line[0][0] == "JMP" || line[0][0] == "CALL" {
 			tokenizedProgram[i] = createJumpAddress(labels, line, memoryAddress)
 		}
-		opcodeProgram = append(opcodeProgram, mnemonicsToOpcode(line))
 		memoryAddress += memorySize[tokenizedProgram[i][0][0]]
 	}
 
+	if len(compileTimeBug) != 0 {
+		for _, err := range compileTimeBug {
+			fmt.Println(err)
+		}
+		log.Fatal("Couldn't compile")
+	}
+
+	var opcodeProgram [][]uint64
+	for _, line := range tokenizedProgram {
+		opcodeProgram = append(opcodeProgram, mnemonicsToOpcode(line))
+	}
 	var byteProgram []uint8 = bytificationOfTheProgram(opcodeProgram)
+
 	return byteProgram
 }
 
@@ -230,8 +242,7 @@ func checkUnexpectedCharacter(line []string) []string {
 
 func checkNumberOfArgs(line []string, i int) {
 	if len(syntaxRules[line[0]]) != len(line)-1 {
-		err := "Wrong number of args for \"" + line[0] + "\" at line " + intToStr(i+1)
-		log.Fatal(err)
+		compileTimeBug = append(compileTimeBug, "Wrong number of args for \""+line[0]+"\" at line "+intToStr(i+1))
 	}
 }
 
@@ -257,12 +268,10 @@ func checkWords(line []string, i int) [][]string {
 			} else if line[0] == "MOV" && number > int(-math.Pow(2, 63)) && number < int(math.Pow(2, 63))-1 {
 				newLine = append(newLine, []string{word, "Number8"})
 			} else {
-				err := "Syntax error \"" + word + "\" at line " + intToStr(i+1)
-				log.Fatal(err)
+				compileTimeBug = append(compileTimeBug, "Syntax error \""+word+"\" at line "+intToStr(i+1))
 			}
 		} else {
-			err := "Unrecognized token \"" + word + "\" at line " + intToStr(i+1)
-			log.Fatal(err)
+			compileTimeBug = append(compileTimeBug, "Unrecognized token \""+word+"\" at line "+intToStr(i+1))
 		}
 	}
 	newLine = append(newLine, []string{intToStr(i), "Line"})
@@ -274,8 +283,7 @@ func checkJumps(line [][]string, labels map[string]int, memoryAddress int) map[s
 		if !(inList(forbiddenLabels, line[0][0][:len(line[0][0])-1])) {
 			labels[string(line[0][0][:len(line[0][0])-1])] = memoryAddress - 1
 		} else {
-			err := "Forbiddent label name \"" + string(line[0][0][:len(line[0][0])-1]) + "\" at line " + intToStr(strToInt(string(line[1][0]))+1)
-			log.Fatal(err)
+			compileTimeBug = append(compileTimeBug, "Forbiddent label name \""+string(line[0][0][:len(line[0][0])-1])+"\" at line "+intToStr(strToInt(string(line[1][0]))+1))
 		}
 	}
 	return labels
@@ -284,28 +292,14 @@ func checkJumps(line [][]string, labels map[string]int, memoryAddress int) map[s
 func checkSyntax(line [][]string, rules []string) {
 	var errorSyntax bool = false
 	var numberLine int
-	for j, rule := range rules {
-		if rule == "Register" && line[j+1][1] != "Register" {
-			errorSyntax = true
-		} else if rule == "Comparison" && line[j+1][1] != "Comparison" {
-			errorSyntax = true
-		} else if rule == "Offset" && line[j+1][1] != "Offset" {
-			errorSyntax = true
-		} else if rule == "Address" && line[j+1][1] != "Address" {
-			errorSyntax = true
-		} else if rule == "Size" && line[j+1][1] != "Size" {
-			errorSyntax = true
-		} else if rule == "Number1" && line[j+1][1] != "Number1" {
-			errorSyntax = true
-		} else if rule == "Number8" && line[j+1][1] != "Number8" {
+	for j := 0; j < len(rules) && j < len(line); j++ {
+		if rules[j] != line[j+1][1] {
 			errorSyntax = true
 		}
 		numberLine = j
 	}
 	if errorSyntax == true {
-		fmt.Println(line)
-		err := "Syntax error at line " + intToStr(strToInt(string(line[numberLine+2][0][0]))+1)
-		log.Fatal(err)
+		compileTimeBug = append(compileTimeBug, "Syntax error at line "+intToStr(strToInt(string(line[numberLine+2][0][0]))+1))
 	}
 }
 
@@ -322,8 +316,7 @@ func delLabels(tokenizedProgram [][][]string) [][][]string {
 func createJumpAddress(labels map[string]int, line [][]string, memoryAdress int) [][]string {
 	var targetLine int = labels[line[1][0]]
 	if targetLine == 0 {
-		err := "Undefined label \"" + line[1][0] + "\""
-		log.Fatal(err)
+		compileTimeBug = append(compileTimeBug, "Undefined label \""+line[1][0]+"\"")
 	}
 	line[1][0] = intToStr(targetLine - memoryAdress)
 	return line
@@ -428,8 +421,6 @@ func mnemonicsToOpcode(line [][]string) []uint64 {
 		} else {
 			newLine = []uint64{uint64(CALL), uint64(strToInt(arg1))}
 		}
-	} else {
-		log.Fatal("Err in mnemonicsToOpcode : " + string(line[0][0]))
 	}
 	return newLine
 }
@@ -533,7 +524,7 @@ func writeToRAM(byteProgram []uint8) {
 func executeProgram() {
 loop:
 	for i := uint32(0); i < uint32(RAMSize/4); i++ {
-		var debugVariable uint32 = i
+		//var debugVariable uint32 = i
 		switch RAM[i] {
 		case uint8(HLT):
 			break loop
@@ -547,8 +538,6 @@ loop:
 			if newAddress < 0 || newAddress >= uint32(RAMSize) {
 				log.Fatal("Address out of bounds")
 			}
-			//fmt.Println(newAddress)
-			//fmt.Println(uint16(RAM[stackPointer]), uint16(RAM[stackPointer-1]))
 			i = newAddress
 		case uint8(AND):
 			var arg1 uint8 = RAM[i+1]
@@ -677,15 +666,14 @@ loop:
 			for j := range 4 {
 				RAM[stackPointer-uint32(j)] = uint8(((i + 4) >> (8 * j)) & 255)
 			}
-			fmt.Println(stackPointer)
 			stackPointer -= 8
 			var offset uint32
 			offset = uint32(RAM[i+1]) | uint32(RAM[i+2])<<8 | uint32(RAM[i+3])<<16 | uint32(RAM[i+4])<<24
 			i += offset
 		}
-		fmt.Println(debugVariable, opcodeToMnemonics[int(RAM[debugVariable])], registers, stackPointer)
-		fmt.Println(RAM[3*(RAMSize>>2):])
-		fmt.Println(RAM[RAMSize>>2 : RAMSize-(RAMSize>>2)])
+		///fmt.Println(debugVariable, opcodeToMnemonics[int(RAM[debugVariable])], registers, stackPointer)
+		///fmt.Println(RAM[3*(RAMSize>>2):])
+		///fmt.Println(RAM[RAMSize>>2 : RAMSize-(RAMSize>>2)])
 	}
 	fmt.Println()
 	fmt.Println(registers)

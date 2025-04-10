@@ -1,6 +1,0 @@
-MOV R0 0
-JMP Label
-ADDI R0 -1
-Label:
-MOV R1 0
-HLT
