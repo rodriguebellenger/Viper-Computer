@@ -674,9 +674,10 @@ loop:
 			if stackPointer <= uint32(RAMSize-(RAMSize>>2)-1) {
 				log.Fatal("Stack overflow (but not the website unfortunately)")
 			}
-			for j := range 8 {
-				RAM[stackPointer-uint32(j)] = uint8(((stackPointer + 4) >> (8 * j)) & 255)
+			for j := range 4 {
+				RAM[stackPointer-uint32(j)] = uint8(((i + 4) >> (8 * j)) & 255)
 			}
+			fmt.Println(stackPointer)
 			stackPointer -= 8
 			var offset uint32
 			offset = uint32(RAM[i+1]) | uint32(RAM[i+2])<<8 | uint32(RAM[i+3])<<16 | uint32(RAM[i+4])<<24
