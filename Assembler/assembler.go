@@ -5,6 +5,7 @@ import (
 	"log"
 	"math"
 	"os"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -19,7 +20,7 @@ const RAMSize uint32 = 1024
 var RAM [RAMSize]uint8
 var mnemonics []string = []string{"MOV", "ADDI", "ADD", "AND", "OR", "NOT", "PUSH", "POP", "SWAP", "CMP", "JMP", "RET", "HLT", "WRT", "READ", "CALL"}
 var registersName []string = []string{"R0", "R1", "R2", "R3", "R4", "R5", "R6", "R7", "R8", "R9", "R10", "R11", "R12", "R13", "R14", "R15"}
-var registers []uint64 = []uint64{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, uint64(RAMSize - 1)}
+var registers []uint64 = []uint64{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, uint64(RAMSize - 1), uint64(RAMSize - 1)}
 
 var compileTimeBug []string
 
@@ -117,19 +118,21 @@ func main() {
 
 	var program string = string(content)
 	var assemblerProgram [][]string = readProgram(program)
+	assemblerProgram = cleanComments(assemblerProgram)
+	fmt.Println(assemblerProgram)
 
 	var startTime time.Time = time.Now()
-	var byteProgram []uint8 = programCleaner(assemblerProgram)
+	//var byteProgram []uint8 = programCleaner(assemblerProgram)
 	var elapsed time.Duration = time.Since(startTime)
-	fmt.Println(byteProgram)
+	//fmt.Println(byteProgram)
 	fmt.Printf("Temps : %s\n", elapsed)
 	fmt.Println()
 
-	writeToRAM(byteProgram)
+	//writeToRAM(byteProgram)
 	//fmt.Println(RAM)
 
 	startTime = time.Now()
-	executeProgram()
+	//executeProgram()
 	elapsed = time.Since(startTime)
 	fmt.Printf("Temps : %s\n", elapsed)
 }
@@ -145,8 +148,17 @@ func readProgram(program string) [][]string {
 	for _, line := range operations {
 		assemblerProgram = append(assemblerProgram, strings.Fields(line))
 	}
-
+	fmt.Println(assemblerProgram)
 	return assemblerProgram
+}
+
+func cleanComments(program [][]string) [][]string {
+	for i := range len(program) {
+		if len(program[i][0]) >= 2 && program[i][0][0] == '/' && program[i][0][1] == '/' {
+			program = slices.Delete(program, i, i+1)
+		}
+	}
+	return program
 }
 
 ///////////////////////
