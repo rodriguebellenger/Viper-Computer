@@ -32,5 +32,7 @@ For the moment, you have the assembly interpreter.
 
 There are 16 registers, R0 through R15.
 
-Convention : 
-R0 is a constant and always is 0.
+Use cases : 
+R0 is a constant and always is 0 (nothing in the assembler stops you from changing its value).
+R15 is the stack pointer.
+R14 is the base pointer.

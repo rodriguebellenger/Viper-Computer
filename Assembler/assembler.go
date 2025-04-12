@@ -14,14 +14,12 @@ import (
 // DATA //
 //////////
 
-var mnemonics []string = []string{"MOV", "ADDI", "ADD", "AND", "OR", "NOT", "PUSH", "POP", "SWAP", "CMP", "JMP", "RET", "HLT", "WRT", "READ", "CALL"}
-var registersName []string = []string{"R0", "R1", "R2", "R3", "R4", "R5", "R6", "R7", "R8", "R9", "R10", "R11", "R12", "R13", "R14", "R15"}
-var registers []uint64 = []uint64{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
-
-const RAMSize int = 1024
+const RAMSize uint32 = 1024
 
 var RAM [RAMSize]uint8
-var stackPointer uint32 = uint32(RAMSize) - 1
+var mnemonics []string = []string{"MOV", "ADDI", "ADD", "AND", "OR", "NOT", "PUSH", "POP", "SWAP", "CMP", "JMP", "RET", "HLT", "WRT", "READ", "CALL"}
+var registersName []string = []string{"R0", "R1", "R2", "R3", "R4", "R5", "R6", "R7", "R8", "R9", "R10", "R11", "R12", "R13", "R14", "R15"}
+var registers []uint64 = []uint64{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, uint64(RAMSize - 1)}
 
 var compileTimeBug []string
 
@@ -522,22 +520,22 @@ func writeToRAM(byteProgram []uint8) {
 /////////////////////////
 
 func executeProgram() {
-	var executionUpperBound uint32 = uint32(RAMSize >> 4)
+	var executionUpperBound uint32 = uint32(RAMSize >> 2)
 	var stackUpperBound uint32 = uint32(RAMSize - (RAMSize >> 2) - 1)
 	var stackLowerBound uint32 = uint32(RAMSize - 1)
 loop:
 	for i := uint32(0); i < executionUpperBound; i++ {
-		//var debugVariable uint32 = i
+		var debugVariable uint32 = i
 		switch RAM[i] {
 		case uint8(HLT):
 			break loop
 		case uint8(RET):
-			if stackPointer == uint32(RAMSize-1) {
+			if uint32(registers[15]) == uint32(RAMSize-1) {
 				log.Fatal("Cannot return because stack is empty at memory address : " + intToStr(int(i)))
 			}
 			var newAddress uint32
-			stackPointer += 8
-			newAddress = uint32(RAM[stackPointer]) | uint32(RAM[stackPointer-1])<<8 | uint32(RAM[stackPointer-2])<<16 | uint32(RAM[stackPointer-3])<<24
+			registers[15] += 8
+			newAddress = uint32(RAM[uint32(registers[15])]) | uint32(RAM[uint32(registers[15])-1])<<8 | uint32(RAM[uint32(registers[15])-2])<<16 | uint32(RAM[uint32(registers[15])-3])<<24
 			if newAddress < 0 || newAddress > executionUpperBound {
 				log.Fatal("Address out of bounds")
 			}
@@ -579,23 +577,23 @@ loop:
 			i += 9
 		case uint8(PUSH):
 			var arg uint8 = RAM[i+1]
-			if stackPointer <= stackUpperBound {
+			if uint32(registers[15]) <= stackUpperBound {
 				log.Fatal("Stack overflow (but not the website unfortunately)")
 			}
 			for j := range 8 {
-				RAM[stackPointer-uint32(j)] = uint8(registers[arg] >> (8 * j))
+				RAM[uint32(registers[15])-uint32(j)] = uint8(registers[arg] >> (8 * j))
 			}
-			stackPointer -= 8
+			registers[15] -= 8
 			i += 1
 		case uint8(POP):
 			var arg uint8 = RAM[i+1]
-			if stackPointer >= stackLowerBound {
+			if uint32(registers[15]) >= stackLowerBound {
 				log.Fatal("Stack underflow")
 			}
-			stackPointer += 8
+			registers[15] += 8
 			var number uint64
 			for j := range 8 {
-				number += uint64(RAM[stackPointer-uint32(j)]) << (8 * j)
+				number += uint64(RAM[uint32(registers[15])-uint32(j)]) << (8 * j)
 			}
 			registers[arg] = number
 			i += 1
@@ -660,20 +658,20 @@ loop:
 			registers[arg2] = intermediateVariable
 			i += 2
 		case uint8(CALL):
-			if stackPointer <= stackUpperBound {
+			if uint32(registers[15]) <= stackUpperBound {
 				log.Fatal("Stack overflow (but not the website unfortunately)")
 			}
 			for j := range 4 {
-				RAM[stackPointer-uint32(j)] = uint8(((i + 4) >> (8 * j)) & 255)
+				RAM[uint32(registers[15])-uint32(j)] = uint8(((i + 4) >> (8 * j)) & 255)
 			}
-			stackPointer -= 8
+			registers[15] -= 8
 			var offset uint32
 			offset = uint32(RAM[i+1]) | uint32(RAM[i+2])<<8 | uint32(RAM[i+3])<<16 | uint32(RAM[i+4])<<24
 			i += offset
 		}
-		///fmt.Println(debugVariable, opcodeToMnemonics[int(RAM[debugVariable])], registers, stackPointer)
-		///fmt.Println(RAM[3*(RAMSize>>2):])
-		///fmt.Println(RAM[RAMSize>>2 : RAMSize-(RAMSize>>2)])
+		fmt.Println(debugVariable, opcodeToMnemonics[int(RAM[debugVariable])], registers)
+		fmt.Println(RAM[3*(RAMSize>>2):])
+		fmt.Println(RAM[RAMSize>>2 : RAMSize-(RAMSize>>2)])
 	}
 	fmt.Println()
 	fmt.Println(registers)
@@ -723,24 +721,6 @@ func inList(liste []string, item string) bool {
 	return false
 }
 
-func inListBool(liste []bool, item bool) bool {
-	for _, element := range liste {
-		if element == item {
-			return true
-		}
-	}
-	return false
-}
-
 func isPowerOfTwo(x int) bool {
 	return x >= 2 && (x&(x-1)) == 0
-}
-
-func exponentOfPowerOfTwo(x int) int {
-	var exponent int = 0
-	for x > 1 {
-		x = x >> 1
-		exponent += 1
-	}
-	return exponent
 }
