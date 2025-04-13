@@ -5,7 +5,6 @@ import (
 	"log"
 	"math"
 	"os"
-	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -117,22 +116,21 @@ func main() {
 	}
 
 	var program string = string(content)
+	program = cleanComments(program)
 	var assemblerProgram [][]string = readProgram(program)
-	assemblerProgram = cleanComments(assemblerProgram)
-	fmt.Println(assemblerProgram)
 
 	var startTime time.Time = time.Now()
-	//var byteProgram []uint8 = programCleaner(assemblerProgram)
+	var byteProgram []uint8 = programCleaner(assemblerProgram)
 	var elapsed time.Duration = time.Since(startTime)
-	//fmt.Println(byteProgram)
+	fmt.Println(byteProgram)
 	fmt.Printf("Temps : %s\n", elapsed)
 	fmt.Println()
 
-	//writeToRAM(byteProgram)
-	//fmt.Println(RAM)
+	writeToRAM(byteProgram)
+	fmt.Println(RAM)
 
 	startTime = time.Now()
-	//executeProgram()
+	executeProgram()
 	elapsed = time.Since(startTime)
 	fmt.Printf("Temps : %s\n", elapsed)
 }
@@ -141,6 +139,26 @@ func main() {
 // INTERPRETER //
 /////////////////
 
+func cleanComments(program string) string {
+	var del bool = false
+	var startDel int
+	var endDel int
+	for i := range len(program) {
+		if program[i] == '/' {
+			del = true
+			startDel = i
+			endDel = i
+		} else if program[i] == '\n' && del {
+			del = false
+			program = program[:startDel] + program[endDel+1:]
+		}
+		if del {
+			endDel += 1
+		}
+	}
+	return program
+}
+
 func readProgram(program string) [][]string {
 	var operations []string = strings.Split(program, "\n")
 	var assemblerProgram [][]string
@@ -148,17 +166,7 @@ func readProgram(program string) [][]string {
 	for _, line := range operations {
 		assemblerProgram = append(assemblerProgram, strings.Fields(line))
 	}
-	fmt.Println(assemblerProgram)
 	return assemblerProgram
-}
-
-func cleanComments(program [][]string) [][]string {
-	for i := range len(program) {
-		if len(program[i][0]) >= 2 && program[i][0][0] == '/' && program[i][0][1] == '/' {
-			program = slices.Delete(program, i, i+1)
-		}
-	}
-	return program
 }
 
 ///////////////////////

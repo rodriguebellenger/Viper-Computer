@@ -1,5 +1,78 @@
+JMP Main
+
+Modulo:
+MOV R3 0
+PUSH R1
+POP R4
+NOT R1
+ADDI R1 1
+Submodulo:
+ADD R2 R1
+CMP R2 R4 G
+JMP Submodulo
+
+
+Main:
+/ Initialize 32 bits for local variable in the stack
 PUSH R14
 PUSH R15
 POP R14
 ADD R15 -32
 
+/ Index in the list starts at 0
+ADDI R14 -4
+WRT @32 *R14 R0
+ADDI R14 4
+
+/ The loop starts at 2
+ADDI R14 -8
+MOV R1 2
+WRT @32 *R14 R1
+ADDI R14 8
+
+/ Jumps to the loop's comparison
+JMP L2
+
+L8:
+/ Boolean variable if the number is prime is set to true at the start
+ADDI R14 -12
+MOV R1 1
+WRT @32 *R14 R1
+ADDI R14 12
+
+/ The second loop starts at 2
+ADDI R14 -16
+MOV R1 2
+WRT @32 *R14 R1
+ADDI R14 16
+
+/ Jumps to second loop comparison
+JMP L3
+
+L6:
+MOV R1
+
+L3:
+/ Reads the variable from the first loop
+ADDI R14 -8
+READ R1 @32 *R14
+ADDI R14 8
+
+/ Reads the variable from the second loop
+ADDI R14 -16
+READ R2 @32 *R14
+ADDI R14 16
+
+/ If the second one is inferior to the first one, we continue
+CMP R2 R1 L
+JMP L6
+
+L2:
+/ Ends the loop if the comparison is false
+ADDI R14 -8
+READ R1 @32 *R14
+ADDI R14 8
+MOV R2 100
+CMP R1 R2 L
+JMP L8
+HLT

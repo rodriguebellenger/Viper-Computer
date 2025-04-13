@@ -1,8 +1,8 @@
-// Test optimisation with a loop
-MOV R1 1000000000
-MOV:
-ADI R1 R1
+/ Test optimisation with a loop
+MOV R1 10
 
+Loop:
+ADDI R1 -1
 CMP R1 R0 G
 JMP Loop
 HLT
