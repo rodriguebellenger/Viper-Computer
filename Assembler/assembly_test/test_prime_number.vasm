@@ -1,0 +1,21 @@
+JMP Main
+
+Modulo:
+MOV R3 0
+PUSH R1
+POP R4
+NOT R1
+ADDI R1 1
+Submodulo:
+ADD R2 R1
+CMP R2 R4 G
+JMP Submodulo
+RET
+
+Main:
+/ Initialize 32 bits for local variable in the stack
+ADDI R15 -32
+
+/ Initialize the start address for the list
+
+HLT

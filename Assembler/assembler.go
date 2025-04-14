@@ -140,23 +140,27 @@ func main() {
 /////////////////
 
 func cleanComments(program string) string {
-	var del bool = false
 	var startDel int
 	var endDel int
-	for i := range len(program) {
-		if program[i] == '/' {
-			del = true
-			startDel = i
+	var del bool = false
+	var cleanedProgram string
+	for i, char := range program {
+		if char == '/' {
 			endDel = i
-		} else if program[i] == '\n' && del {
+			cleanedProgram += program[startDel:endDel]
+			del = true
+		} else if char == '\n' {
 			del = false
-			program = program[:startDel] + program[endDel+1:]
+			startDel = endDel
 		}
 		if del {
+			startDel += 1
+		} else {
 			endDel += 1
 		}
 	}
-	return program
+	fmt.Println(cleanedProgram)
+	return cleanedProgram
 }
 
 func readProgram(program string) [][]string {
@@ -269,7 +273,7 @@ func checkWords(line []string, i int) [][]string {
 	for j, word := range line {
 		if inList(mnemonics, word) {
 			newLine = append(newLine, []string{word, "Operation"})
-		} else if inList([]string{"G", "L", "E"}, word) {
+		} else if inList([]string{"G", "L", "E", "NE"}, word) {
 			newLine = append(newLine, []string{word, "Comparison"})
 		} else if word[len(word)-1] == ':' || (j > 0 && (line[j-1] == "JMP" || line[j-1] == "CALL")) {
 			newLine = append(newLine, []string{word, "Offset"})
@@ -405,6 +409,8 @@ func mnemonicsToOpcode(line [][]string) []uint64 {
 				newLine = []uint64{uint64(CMP), arg1, arg2, uint64(2)}
 			} else if arg3 == "E" {
 				newLine = []uint64{uint64(CMP), arg1, arg2, uint64(3)}
+			} else if arg3 == "NE" {
+				newLine = []uint64{uint64(CMP), arg1, arg2, uint64(4)}
 			}
 		}
 	} else if string(line[0][0]) == "JMP" {
@@ -632,6 +638,10 @@ loop:
 				}
 			case 3:
 				if registers[arg1] != registers[arg2] {
+					i += uint32(memorySize[opcodeToMnemonics[int(RAM[int(i+4)])]])
+				}
+			case 4:
+				if registers[arg1] == registers[arg2] {
 					i += uint32(memorySize[opcodeToMnemonics[int(RAM[int(i+4)])]])
 				}
 			}

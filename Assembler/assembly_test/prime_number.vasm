@@ -10,14 +10,26 @@ Submodulo:
 ADD R2 R1
 CMP R2 R4 G
 JMP Submodulo
-
+RET
 
 Main:
 / Initialize 32 bits for local variable in the stack
+ADDI R15 -32
+
+/ Initialize the start address for the list
 PUSH R14
-PUSH R15
-POP R14
-ADD R15 -32
+POP R1
+ADDI R1 1
+MOV R2 -4
+Div:
+ADD R1 R2
+ADDI R3 1
+CMP R1 R0 NE
+JMP Div
+
+ADDI R14 -24
+WRT @32 *R14 R3
+ADDI R14 24
 
 / Index in the list starts at 0
 ADDI R14 -4
@@ -50,7 +62,22 @@ ADDI R14 16
 JMP L3
 
 L6:
-MOV R1
+CALL Modulo
+CMP R2 R0 G
+JMP L4
+
+ADDI R14 -12
+MOV R1 0
+WRT @32 *R14 R1
+ADDI R14 12
+JMP L5
+
+L4:
+ADDI R14 -16
+READ R1 @32 *R14
+ADDI R1 1
+WRT @32 *R14 R1
+ADDI R14 16
 
 L3:
 / Reads the variable from the first loop
@@ -66,6 +93,27 @@ ADDI R14 16
 / If the second one is inferior to the first one, we continue
 CMP R2 R1 L
 JMP L6
+
+L5:
+ADDI R14 -12
+READ R1 @32 *R14
+ADDI R14 12
+MOV R2 1
+CMP R2 R1 NE
+JMP L7
+
+ADDI R14 -4
+READ R1 @32 *R14
+ADDI R1 1
+WRT @32 *R14 R1
+ADDI R14 4
+
+L7:
+ADDI R14 -8
+READ R1 @32 *R14
+ADDI R1 1
+WRT @32 *R14 R1
+ADDI R14 8
 
 L2:
 / Ends the loop if the comparison is false

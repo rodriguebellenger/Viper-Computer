@@ -1,6 +1,6 @@
 / Test optimisation with a loop
 MOV R1 10
-
+/ Test
 Loop:
 ADDI R1 -1
 CMP R1 R0 G
