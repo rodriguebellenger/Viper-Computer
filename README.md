@@ -4,8 +4,8 @@ It should work as you have an up-to-date version of Go, since their are no depen
 The different operations possible are listed below. For how to write an actual program, please refer to the examples in
 assembler/assembly_test.
 
-      1byte  | 1byte  | 1byte  | 1byte
-------------------------------------
+|   | 1byte  | 1byte  | 1byte  | 1byte |
+|---|--------|--------|--------|-------|
 000 : HLT    | EMPTY  | EMPTY  | EMPTY
 
 001 : AND    | R1     | R2     | EMPTY
