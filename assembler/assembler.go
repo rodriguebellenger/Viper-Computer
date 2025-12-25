@@ -170,15 +170,13 @@ var forbiddenLabels []string = []string{"R0", "R1", "R2", "R3", "R4", "R5", "R6"
 //////////
 
 func main() {
-	//args := os.Args[1:] // Skip the program name
-	args := "assembly_test/loops.vasm"
-	content, err := os.ReadFile(args)
+	args := os.Args[1:] // Skip the program name
+	content, err := os.ReadFile(args[0])
 	if err != nil {
-		log.Fatal("\rCouldn't read file")
+		log.Fatal("\rCouldn't read file : " + args[0])
 	}
 
 	var program string = string(content)
-	//program = cleanComments(program)
 	var assemblerProgram [][]string = readProgram(program)
 
 	var startTime time.Time = time.Now()
@@ -197,16 +195,17 @@ func main() {
 	elapsed = time.Since(startTime)
 	fmt.Printf("Temps : %s\n", elapsed)
 
-	var total_time time.Duration
-	for i := 0; i < 200; i++ {
-		startTime = time.Now()
-		for i := 0; i < 1; i++ {
-			executeProgram()
-		}
-		total_time += time.Since(startTime)
-	}
-	fmt.Printf("Temps : %s\n", total_time/200)
-	fmt.Printf("Temps total : %s\n", total_time)
+	// EXECUTION TIME AVERAGE
+	//var total_time time.Duration
+	//for i := 0; i < 200; i++ {
+	//	startTime = time.Now()
+	//	for i := 0; i < 1; i++ {
+	//		executeProgram()
+	//	}
+	//	total_time += time.Since(startTime)
+	//}
+	//fmt.Printf("Temps : %s\n", total_time/200)
+	//fmt.Printf("Temps total : %s\n", total_time)
 }
 
 /////////////////
@@ -791,9 +790,9 @@ loop:
 		//fmt.Println(RAM[RAMSize>>2 : RAMSize-(RAMSize>>2)])
 		//fmt.Println(RAM)
 	}
-	//fmt.Println()
-	//fmt.Println(registers)
-	//fmt.Println(RAM)
+	fmt.Println()
+	fmt.Println(registers)
+	fmt.Println(RAM)
 }
 
 ///////////

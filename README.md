@@ -1,137 +1,69 @@
-# Viper computer
+Viper Computer is a virtual computer made for educationnal purposes.
+To use it, enter (from the project folder) : "go run assembler/assembler.go file_name.vasm" (the .vasm extension is not mandatory)
+It should work as you have an up-to-date version of Go, since their are no dependency.
+The different operations possible are listed below. For how to write an actual program, please refer to the examples in
+assembler/assembly_test.
 
-The viper computer is a virtual computer created for educationnal purposes.
-This README is NOT up to date, but I'm too lazy to do it now, please check "instruction_set.txt" instead.
+      1byte  | 1byte  | 1byte  | 1byte
+------------------------------------
+000 : HLT    | EMPTY  | EMPTY  | EMPTY
 
-# Assembly
+001 : AND    | R1     | R2     | EMPTY
+002 : ANDIB  | R1     | IMM    | EMPTY
+003 : ANDIW  | R1     | IMM    | IMM
+004 : OR     | R1     | R2     | EMPTY
+005 : ORIB   | R1     | IMM    | EMPTY
+006 : ORIW   | R1     | IMM    | IMM
+007 : NOT    | R1     | EMPTY  | EMPTY
+008 : SHIL   | R1     | R2     | EMPTY
+009 : SHILI  | R1     | IMM    | EMPTY
+010 : SHIR   | R1     | R2     | EMPTY
+011 : SHIRI  | R1     | IMM    | EMPTY
 
-For the moment, you have the assembly interpreter.
+012 : ADD    | R1     | R2     | EMPTY
+013 : ADDIB  | R1     | IMM    | EMPTY
+014 : ADDIW  | R1     | IMM    | IMM
+015 : INCR   | R1     | EMPTY  | EMPTY
+016 : DECR   | R1     | EMPTY  | EMPTY
+017 : MUL    | R1     | R2     | EMPTY
+018 : MULIB  | R1     | IMM    | EMPTY
+019 : MULIW  | R1     | IMM    | IMM
+020 : DIV    | R1     | R2     | EMPTY
+021 : DIVIB  | R1     | IMM    | EMPTY
+022 : DIVIW  | R1     | IMM    | IMM
+023 : MOD    | R1     | R2     | EMPTY
+024 : MODIB  | R1     | IMM    | EMPTY
+025 : MODIW  | R1     | IMM    | IMM
+026 : CLEAR  | R1     | EMPTY  | EMPTY
+027 : MOV1B  | R1     | IMM    | EMPTY    // Move in the first and second byte of the register (less significant bytes)
+028 : MOV2B  | R1     | IMM    | EMPTY    // Move in the third and fourth byte of the register
+029 : MOV3B  | R1     | IMM    | EMPTY    // Move in the fifth and sixth byte of the register
+030 : MOV4B  | R1     | IMM    | EMPTY    // Move in the seventh and eighth byte of the register (more significant bytes)
+031 : MOV1W  | R1     | IMM    | IMM    // Move in the first and second byte of the register (less significant bytes)
+032 : MOV2W  | R1     | IMM    | IMM    // Move in the third and fourth byte of the register
+033 : MOV3W  | R1     | IMM    | IMM    // Move in the fifth and sixth byte of the register
+034 : MOV4W  | R1     | IMM    | IMM    // Move in the seventh and eighth byte of the register (more significant bytes)
+035 : MOVR   | R1     | R2     | EMPTY  // Copy the content of R2 into R1
+036 : SWAP   | R1     | R2     | EMPTY
 
-## Operations
+037 : PUSH   | R1     | EMPTY  | EMPTY
+038 : PUSHIB | IMM    | EMPTY  | EMPTY
+039 : PUSHIW | IMM    | IMM    | EMPTY
+040 : PUSHIT | IMM    | IMM    | IMM
+041 : POP    | R1     | EMPTY  | EMPTY
+042 : PEEK   | R1     | EMPTY  | EMPTY
 
-```
-HLT
-```
-Stops the program no matter what.
+043 : CMP    | R1     | R2     | COMP_OP
 
----
+044 : JMP    | OFFSET | OFFSET | OFFSET
+045 : JMPB   | OFFSET | EMPTY  | EMPTY   // Automatically created by the assembler
+046 : JMPW   | OFFSET | OFFSET | EMPTY   // Automatically created by the assembler
+047 : JMPT   | OFFSET | OFFSET | OFFSET  // Automatically created by the assembler
+048 : CALL   | OFFSET | OFFSET | OFFSET
+049 : CALLB  | OFFSET | EMPTY  | EMPTY   // Automatically created by the assembler
+050 : CALLW  | OFFSET | OFFSET | EMPTY   // Automatically created by the assembler
+051 : CALLT  | OFFSET | OFFSET | OFFSET  // Automatically created by the assembler
+052 : RET    | EMPTY  | EMPTY  | EMPTY
 
-```
-CALL Label
-```
-Jump to the address of the label, and push the current address onto the stack.
-
----
-
-```
-RET
-```
-Return to the address at the top of the stack.
-
----
-
-```
-MOV R1 255
-```
-Move the number to the register specified (see registers section).
-The number is 64 bits.
-
----
-
-```
-ADD R1 R2
-```
-Add the content of two registers and put the result back in the first one.
-
----
-
-```
-ADDI R1 175
-```
-Add an immediate to a register (immediate is 8 bits).
-
----
-
-```
-PUSH R1
-```
-Push the content of a register onto the stack.
-
----
-
-```
-POP R1
-```
-Pop the top of the stack and put it in a register.
-
----
-
-```
-AND R1 R2
-```
-Operate a bitwise and between two registers and put the result back in the first one.
-
----
-
-```
-OR R1 R2
-```
-Operate a bitwise or between two registers and put the result back in the first one.
-
----
-
-```
-NOT R1
-```
-Operate a bitwise not on a register.
-
----
-
-```
-SWAP R1 R2
-```
-Swap the content of two registers.
-
----
-
-```
-CMP R1 R2 (G/L/E)
-```
-Compare two registers with greater/less/equal operator and skip the next instruction if the comparison is false.
-
----
-
-```
-JMP Label
-```
-Jump inconditionally to a label.
-
----
-
-```
-WRT @32 *R1 R2
-```
-Write the value of a register at an address contained in a register, with the size indicated.
-In this case, it puts the value of R2 at the addres contained in R1, plus the three next address because the value is 32bits.
-
----
-
-```
-READ R1 @32 *R2
-```
-Read the value at an address contained in a register, with the size indicated, and put it in a register.
-In this case, it reads the value of the address contained in R2, plus the three next address because the value is 32bits, and puts it in R1.
-
----
-
-```
-Label:
-```
-Create a label that you can jump to.
-
-## Registers
-
-There are 16 registers, R0 through R15.
-
-Convention : 
-R0 is a constant and always is 0. Nothing stop you from changing it, but I don't think it should.
+053 : WRT    | SIZE   | *R1    | R2
+054 : READ   | R1     | SIZE   | *R2
