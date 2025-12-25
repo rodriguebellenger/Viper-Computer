@@ -1,8 +1,14 @@
 Viper Computer is a virtual computer made for educationnal purposes.
-To use it, enter (from the project folder) : "go run assembler/assembler.go file_name.vasm" (the .vasm extension is not mandatory)
+
+To use it, enter (from the project folder) : 
+"go run assembler/assembler.go file_name.vasm" (the .vasm extension is not mandatory)
+
 It should work as you have an up-to-date version of Go, since their are no dependency.
-The different operations possible are listed below. For how to write an actual program, please refer to the examples in
-assembler/assembly_test.
+
+The different operations possible are listed below. 
+
+For how to write an actual program, please refer to the 
+examples in assembler/assembly_test.
 
 |   | 1byte  | 1byte  | 1byte  | 1byte |
 |---|--------|--------|--------|-------|
