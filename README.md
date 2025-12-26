@@ -69,5 +69,5 @@ The different operations possible are listed below.
 |050 | CALLW  | OFFSET | OFFSET | EMPTY | Inserted automatically by the assembler | No |
 |051 | CALLT  | OFFSET | OFFSET | OFFSET | Inserted automatically by the assembler | No |
 |052 | RET    | EMPTY  | EMPTY  | EMPTY | The execution continues at the address at the top of the stack | No |
-|053 | WRT    | SIZE   | *Register  Register || Yes |
+|053 | WRT    | SIZE   | *Register | Register || Yes |
 |054 | READ   | Register | SIZE   | *Register || Yes |
