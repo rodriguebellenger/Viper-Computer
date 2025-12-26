@@ -14,8 +14,8 @@ The RAM has a size of a kilobyte (but can easily be changed with RAMSize variabl
 
 The different operations possible are listed below. 
 
-|   | 1byte  | 1byte  | 1byte  | 1byte |Additionnal info| Works |
-|---|--------|--------|--------|-------|-| Yes |
+   | 1byte  | 1byte  | 1byte  | 1byte |Additionnal info| Works |
+---|--------|--------|--------|-------|-|-|
 000 | HLT    | EMPTY  | EMPTY  | EMPTY || Yes |
 001 | AND    | R1     | R2     | EMPTY || Yes |
 002 | ANDIB  | R1     | IMM    | EMPTY || Yes |
