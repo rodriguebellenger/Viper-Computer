@@ -13,7 +13,7 @@ import (
 // DATA //
 //////////
 
-const RAMSize uint32 = 100
+const RAMSize uint32 = 1024
 
 var RAM [RAMSize]uint8
 var mnemonics []string = []string{"HLT", "AND", "ANDIB", "ANDIW", "OR", "ORIB", "ORIW", "NOT", "SHIL", "SHILI", "SHIR", "SHIRI", "ADD", "ADDIB", "ADDIW", "INCR", "DECR", "MUL", "MULIB", "MULIW", "DIV", "DIVIB", "DIVIW", "MOD", "MODIB", "MODIW", "CLEAR", "MOV1B", "MOV2B", "MOV3B", "MOV4B", "MOV1W", "MOV2W", "MOV3W", "MOV4W", "MOVR", "SWAP", "PUSH", "PUSHIB", "PUSHIW", "PUSHIT", "POP", "PEEK", "CMP", "JMP", "CALL", "RET", "WRT", "READ"}
@@ -500,11 +500,10 @@ func writeToRAM(byteProgram []uint8) {
 /////////////////////////
 
 func executeProgram() {
-	var executionUpperBound uint32 = uint32(RAMSize >> 2)
 	var stackUpperBound uint32 = uint32(RAMSize - (RAMSize >> 2) - 1)
 	var stackLowerBound uint32 = uint32(RAMSize - 1)
 loop:
-	for i := uint32(0); i < executionUpperBound+1000; i++ {
+	for i := uint32(0); i < RAMSize; i++ {
 		//var debugVariable uint32 = i
 		switch RAM[i] {
 		case uint8(HLT):
