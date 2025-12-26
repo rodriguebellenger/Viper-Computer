@@ -17,49 +17,49 @@ The different operations possible are listed below.
 |   | 1byte  | 1byte  | 1byte  | 1byte |Additionnal info| Works |
 |---|--------|--------|--------|-------|-|-|
 |000 | HLT    | EMPTY  | EMPTY  | EMPTY || Yes |
-|001 | AND    | R1     | R2     | EMPTY || Yes |
-|002 | ANDIB  | R1     | IMM    | EMPTY || Yes |
-|003 | ANDIW  | R1     | IMM    | IMM   || Yes |
-|004 | OR     | R1     | R2     | EMPTY || Yes |
-|005 | ORIB   | R1     | IMM    | EMPTY || Yes |
-|006 | ORIW   | R1     | IMM    | IMM   || Yes |
-|007 | NOT    | R1     | EMPTY  | EMPTY || Yes |
-|008 | SHIL   | R1     | R2     | EMPTY || Yes |
-|009 | SHILI  | R1     | IMM    | EMPTY || Yes |
-|010 | SHIR   | R1     | R2     | EMPTY || Yes |
-|011 | SHIRI  | R1     | IMM    | EMPTY || Yes |
-|012 | ADD    | R1     | R2     | EMPTY || Yes |
-|013 | ADDIB  | R1     | IMM    | EMPTY || Yes |
-|014 | ADDIW  | R1     | IMM    | IMM   || Yes |
-|015 | INCR   | R1     | EMPTY  | EMPTY || Yes |
-|016 | DECR   | R1     | EMPTY  | EMPTY || Yes |
-|017 | MUL    | R1     | R2     | EMPTY || No |
-|018 | MULIB  | R1     | IMM    | EMPTY || No |
-|019 | MULIW  | R1     | IMM    | IMM   || No |
-|020 | DIV    | R1     | R2     | EMPTY || No |
-|021 | DIVIB  | R1     | IMM    | EMPTY || No |
-|022 | DIVIW  | R1     | IMM    | IMM   || No |
-|023 | MOD    | R1     | R2     | EMPTY || No |
-|024 | MODIB  | R1     | IMM    | EMPTY || No |
-|025 | MODIW  | R1     | IMM    | IMM   || No |
-|026 | CLEAR  | R1     | EMPTY  | EMPTY || No |
-|027 | MOV1B  | R1     | IMM    | EMPTY | least significant byte | Yes |
-|028 | MOV2B  | R1     | IMM    | EMPTY || Yes |
-|029 | MOV3B  | R1     | IMM    | EMPTY || Yes |
-|030 | MOV4B  | R1     | IMM    | EMPTY | most significant byte | Yes |
-|031 | MOV1W  | R1     | IMM    | IMM   | least significant byte | Yes |
-|032 | MOV2W  | R1     | IMM    | IMM   || Yes |
-|033 | MOV3W  | R1     | IMM    | IMM   || Yes |
-|034 | MOV4W  | R1     | IMM    | IMM   | most significant byte | Yes |
-|035 | MOVR   | R1     | R2     | EMPTY || No |
-|036 | SWAP   | R1     | R2     | EMPTY || No |
-|037 | PUSH   | R1     | EMPTY  | EMPTY || No |
+|001 | AND    | Register | Register | EMPTY || Yes |
+|002 | ANDIB  | Register | IMM    | EMPTY || Yes |
+|003 | ANDIW  | Register | IMM    | IMM   || Yes |
+|004 | OR     | Register | Register | EMPTY || Yes |
+|005 | ORIB   | Register | IMM    | EMPTY || Yes |
+|006 | ORIW   | Register | IMM    | IMM   || Yes |
+|007 | NOT    | Register | EMPTY  | EMPTY || Yes |
+|008 | SHIL   | Register | Register | EMPTY || Yes |
+|009 | SHILI  | Register | IMM    | EMPTY || Yes |
+|010 | SHIR   | Register | Register | EMPTY || Yes |
+|011 | SHIRI  | Register | IMM    | EMPTY || Yes |
+|012 | ADD    | Register | Register | EMPTY || Yes |
+|013 | ADDIB  | Register | IMM    | EMPTY || Yes |
+|014 | ADDIW  | Register | IMM    | IMM   || Yes |
+|015 | INCR   | Register | EMPTY  | EMPTY || Yes |
+|016 | DECR   | Register | EMPTY  | EMPTY || Yes |
+|017 | MUL    | Register | Register | EMPTY || No |
+|018 | MULIB  | Register | IMM    | EMPTY || No |
+|019 | MULIW  | Register | IMM    | IMM   || No |
+|020 | DIV    | Register | Register | EMPTY || No |
+|021 | DIVIB  | Register | IMM    | EMPTY || No |
+|022 | DIVIW  | Register | IMM    | IMM   || No |
+|023 | MOD    | Register | Register | EMPTY || No |
+|024 | MODIB  | Register | IMM    | EMPTY || No |
+|025 | MODIW  | Register | IMM    | IMM   || No |
+|026 | CLEAR  | Register | EMPTY  | EMPTY || No |
+|027 | MOV1B  | Register | IMM    | EMPTY | least significant byte | Yes |
+|028 | MOV2B  | Register | IMM    | EMPTY || Yes |
+|029 | MOV3B  | Register | IMM    | EMPTY || Yes |
+|030 | MOV4B  | Register | IMM    | EMPTY | most significant byte | Yes |
+|031 | MOV1W  | Register | IMM    | IMM   | least significant byte | Yes |
+|032 | MOV2W  | Register | IMM    | IMM   || Yes |
+|033 | MOV3W  | Register | IMM    | IMM   || Yes |
+|034 | MOV4W  | Register | IMM    | IMM   | most significant byte | Yes |
+|035 | MOVR   | Register | Register | EMPTY || No |
+|036 | SWAP   | Register | Register | EMPTY || No |
+|037 | PUSH   | Register | EMPTY  | EMPTY || No |
 |038 | PUSHIB | IMM    | EMPTY  | EMPTY || No |
 |039 | PUSHIW | IMM    | IMM    | EMPTY || No |
 |040 | PUSHIT | IMM    | IMM    | IMM   || No |
-|041 | POP    | R1     | EMPTY  | EMPTY || No |
-|042 | PEEK   | R1     | EMPTY  | EMPTY || No |
-|043 | CMP    | R1     | R2     | COMP_OP || Yes |
+|041 | POP    | Register | EMPTY  | EMPTY || No |
+|042 | PEEK   | Register | EMPTY  | EMPTY || No |
+|043 | CMP    | Register | Register | COMP_OP | The COMP_OP can be G, L, E, or NE (greater, less, equal or not equal) | Yes |
 |044 | JMP    | OFFSET | OFFSET | OFFSET | Jump to a label and continue execution from there | Yes |
 |045 | JMPB   | OFFSET | EMPTY  | EMPTY | Inserted automatically by the assembler | Yes |
 |046 | JMPW   | OFFSET | OFFSET | EMPTY | Inserted automatically by the assembler | Yes |
@@ -69,5 +69,5 @@ The different operations possible are listed below.
 |050 | CALLW  | OFFSET | OFFSET | EMPTY | Inserted automatically by the assembler | No |
 |051 | CALLT  | OFFSET | OFFSET | OFFSET | Inserted automatically by the assembler | No |
 |052 | RET    | EMPTY  | EMPTY  | EMPTY | The execution continues at the address at the top of the stack | No |
-|053 | WRT    | SIZE   | *R1    | R2 || Yes |
-|054 | READ   | R1     | SIZE   | *R2 || Yes |
+|053 | WRT    | SIZE   | *Register  Register || Yes |
+|054 | READ   | Register | SIZE   | *Register || Yes |
