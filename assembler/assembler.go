@@ -165,13 +165,62 @@ var forbiddenLabels []string = []string{"R0", "R1", "R2", "R3", "R4", "R5", "R6"
 	"MOVR", "SWAP", "PUSH", "PUSHIB", "PUSHIW", "PUSHIT", "POP", "PEEK", "CMP", "JMP", "JMPB", "JMPW", "JMPT", "CALL", "CALLB", "CALLW", "CALLT", "RET", "WRT", "READ",
 	"E", "G", "L", "NE"}
 
+type Command struct {
+    Parse       func([]string) (any, error)
+    Run         func(any) error
+}
+var commands = map[string]Command{
+    "--run":   runCommand,
+    "--check": checkCommand,
+    "--emit":  testCommand,
+	"--load":  loadCommand,
+	"--help":  helpCommand,
+}
+
+const runCommand Command = Command{
+	Parse: parseRun,
+	Run: runRun,
+}
+const checkCommand Command = Command{
+	Parse: parseCheck,
+	Run: runCheck,
+}
+const emitCommand Command = Command{
+	Parse: parseEmit,
+	Run: runEmit,
+}
+const loadCommand Command = Command{
+	Parse: parseLoad,
+	Run: runLoad,
+}
+const helpCommand Command = Command{
+	Parse: parseHelp,
+	Run: runHelp,
+}
+
 //////////
 // MAIN //
 //////////
 
 func main() {
-	args := os.Args[1:] // Skip the program name
-	checkArgs(args)
+	
+
+
+
+
+	if args[0] == "--help" {
+	fmt.Println("""Usage : 
+go path/to/assembler.go <commands> [arguments]
+
+The commands are : 
+--run   [arguments]=path/to/file.vasm [optional]=--time x        (assemble the file to bytecode and execute it through 
+the Go bytecode interpreter. \"--time x\" measure the average execution time of the vasm program.)
+--check [arguments]=path/to/file.vasm                            (check if the file can be assembled)
+--emit  [arguments]=path/to/file.vasm path/to/assembled_file.vbc (save the assembled program to a specified location)
+--load  [arguments]=path/to/assembled_file.vbc                   (load an assembled program and execute it)
+""")
+	}
+	args := os.Args[1:]
 	content, err := os.ReadFile(args[0])
 	if err != nil {
 		log.Fatal("\rCouldn't read file : " + args[0])
@@ -183,7 +232,6 @@ func main() {
 	var startTime time.Time = time.Now()
 	var byteProgram []uint8 = programCleaner(assemblerProgram)
 	var elapsed time.Duration = time.Since(startTime)
-	fmt.Println(byteProgram)
 	fmt.Printf("Temps : %s\n", elapsed)
 	fmt.Println()
 
@@ -209,22 +257,12 @@ func main() {
 	//fmt.Printf("Temps total : %s\n", total_time)
 }
 
-func checkArgs(args []string) {
-	if args[0] == "--help" {
-		fmt.Println("""Usage : 
-go path/to/assembler.go <commands> [arguments]
+//////////////
+// COMMANDS //
+//////////////
 
-The commands are : 
---run   [arguments]=path/to/file.vasm                            (assemble the file to bytecode and execute it through the Go bytecode interpreter)
---check [arguments]=path/to/file.vasm                            (check if the file can be assembled)
---emit  [arguments]=path/to/file.vasm path/to/assembled_file.vbc (save the assembled program to a specified location)
---load  [arguments]=path/to/assembled_file.vbc                   (load an assembled program and execute it)
-""")
-	}
-	if args[0][len(args[0])-5:] != ".vasm" {
-		log.Fatal("Unrecognized extension for file : "+args[0])
-	}
-	if args
+func parseRun() {
+
 }
 
 /////////////////
