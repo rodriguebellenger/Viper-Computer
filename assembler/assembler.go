@@ -171,6 +171,7 @@ var forbiddenLabels []string = []string{"R0", "R1", "R2", "R3", "R4", "R5", "R6"
 
 func main() {
 	args := os.Args[1:] // Skip the program name
+	checkArgs(args)
 	content, err := os.ReadFile(args[0])
 	if err != nil {
 		log.Fatal("\rCouldn't read file : " + args[0])
@@ -206,6 +207,24 @@ func main() {
 	//}
 	//fmt.Printf("Temps : %s\n", total_time/200)
 	//fmt.Printf("Temps total : %s\n", total_time)
+}
+
+func checkArgs(args []string) {
+	if args[0] == "--help" {
+		fmt.Println("""Usage : 
+go path/to/assembler.go <commands> [arguments]
+
+The commands are : 
+--run   [arguments]=path/to/file.vasm                            (assemble the file to bytecode and execute it through the Go bytecode interpreter)
+--check [arguments]=path/to/file.vasm                            (check if the file can be assembled)
+--emit  [arguments]=path/to/file.vasm path/to/assembled_file.vbc (save the assembled program to a specified location)
+--load  [arguments]=path/to/assembled_file.vbc                   (load an assembled program and execute it)
+""")
+	}
+	if args[0][len(args[0])-5:] != ".vasm" {
+		log.Fatal("Unrecognized extension for file : "+args[0])
+	}
+	if args
 }
 
 /////////////////
