@@ -169,33 +169,12 @@ type Command struct {
     Parse       func([]string) (any, error)
     Run         func(any) error
 }
-var commands = map[string]Command{
+var commands = map[string]func([]string){
     "--run":   runCommand,
     "--check": checkCommand,
-    "--emit":  testCommand,
-	"--load":  loadCommand,
+    //"--emit":  testCommand,
+	//"--load":  loadCommand,
 	"--help":  helpCommand,
-}
-
-const runCommand Command = Command{
-	Parse: parseRun,
-	Run: runRun,
-}
-const checkCommand Command = Command{
-	Parse: parseCheck,
-	Run: runCheck,
-}
-const emitCommand Command = Command{
-	Parse: parseEmit,
-	Run: runEmit,
-}
-const loadCommand Command = Command{
-	Parse: parseLoad,
-	Run: runLoad,
-}
-const helpCommand Command = Command{
-	Parse: parseHelp,
-	Run: runHelp,
 }
 
 //////////
@@ -203,24 +182,13 @@ const helpCommand Command = Command{
 //////////
 
 func main() {
-	
-
-
-
-
-	if args[0] == "--help" {
-	fmt.Println("""Usage : 
-go path/to/assembler.go <commands> [arguments]
-
-The commands are : 
---run   [arguments]=path/to/file.vasm [optional]=--time x        (assemble the file to bytecode and execute it through 
-the Go bytecode interpreter. \"--time x\" measure the average execution time of the vasm program.)
---check [arguments]=path/to/file.vasm                            (check if the file can be assembled)
---emit  [arguments]=path/to/file.vasm path/to/assembled_file.vbc (save the assembled program to a specified location)
---load  [arguments]=path/to/assembled_file.vbc                   (load an assembled program and execute it)
-""")
+	var args []string = os.Args[1:]
+	command, ok := commands[args[0]]
+	if !ok {
+    	log.Fatal("Unknown command, please enter --help to see the full command list.")
 	}
-	args := os.Args[1:]
+	command(args[1:])
+
 	content, err := os.ReadFile(args[0])
 	if err != nil {
 		log.Fatal("\rCouldn't read file : " + args[0])
@@ -261,8 +229,68 @@ the Go bytecode interpreter. \"--time x\" measure the average execution time of 
 // COMMANDS //
 //////////////
 
-func parseRun() {
+func runCommand(args []string) {
+	content, err := os.ReadFile(args[0])
+	if err != nil {
+		log.Fatal("\rCouldn't read file : " + args[0])
+	}
+	content = content[1:]
+	var debug bool = false
+	var time_measurement bool = false
+	
+	for _, item := range args {
+		if item == "debug" {
+			debug = true
+		} else if item == "-time" {
+			time_measurement = true
+		} else if isInt(item) {
+		} else {
+			log.Fatal("Unrecognized argument for run command : "+item)
+		}
+	}
 
+	var program string = string(content)
+	var assemblerProgram [][]string = readProgram(program)
+
+	var startTime time.Time = time.Now()
+	var byteProgram []uint8 = programCleaner(assemblerProgram)
+	var elapsed time.Duration = time.Since(startTime)
+	if debug {
+		fmt.Println(byteProgram)
+		fmt.Printf("Temps : %s\n\n", elapsed)
+	}
+	if time_measurement {
+
+	}
+}
+
+func checkCommand(args []string) {
+	content, err := os.ReadFile(args[0])
+	if err != nil {
+		log.Fatal("\rCouldn't read file : " + args[0])
+	}
+
+	var program string = string(content)
+	var assemblerProgram [][]string = readProgram(program)
+
+	var startTime time.Time = time.Now()
+	var byteProgram []uint8 = programCleaner(assemblerProgram)
+	var elapsed time.Duration = time.Since(startTime)
+	if len(args)>1 && args[1]=="-debug" {
+		fmt.Println(byteProgram)
+		fmt.Printf("Temps : %s\n\n", elapsed)
+	}
+}
+
+func helpCommand(_ []string) {
+	fmt.Println(`Usage : 
+go run path/to/assembler.go <commands> [arguments]
+	
+The commands are : 
+--run   [arguments]=path/to/file.vasm [optional]=-time x -debug  (assemble the file to bytecode and execute it through the Go bytecode interpreter. "-time x" measure the average execution time of the vasm program.)
+--check [arguments]=path/to/file.vasm [optionnal]=-debug         (check if the file can be assembled. "-debug" displays the program as assembled bytes)
+--emit  [arguments]=path/to/file.vasm path/to/assembled_file.vbc (save the assembled program to a specified location)
+--load  [arguments]=path/to/assembled_file.vbc                   (load an assembled program and execute it)`)
 }
 
 /////////////////
@@ -319,6 +347,8 @@ func programCleaner(assemblerProgram [][]string) []uint8 {
 			fmt.Println(err)
 		}
 		log.Fatal("Couldn't compile")
+	} else {
+		fmt.Println("No compile error")
 	}
 
 	var opcodeProgram [][]uint32
@@ -399,7 +429,7 @@ func checkWords(line []string, i int) [][]string {
 				newLine = append(newLine, []string{word, "Int16"})
 			} else if line[0] == "PUSHIT" && number < 16777216 {
 				newLine = append(newLine, []string{word, "Int24"})
-			} else {
+			} else if inList([]string{"ANDIB", "ORIB", "SHILI", "SHIRI", "ADDIB", "MULIB", "DIVIB", "MODIB", "MOV1B", "MOV2B", "MOV3B", "MOV4B", "PUSHIB", "ANDIW", "ORIW", "ADDIW", "MULIW", "DIVIW", "MODIW", "MOV1W", "MOV2W", "MOV3W", "MOV4W", "PUSHIW", "PUSHIT"}, line[0]) {
 				compileTimeBug = append(compileTimeBug, "Immediate \""+word+"\" is too big at line "+intToStr(i+1))
 			}
 		} else {
@@ -447,7 +477,7 @@ func delLabels(tokenizedProgram [][][]string) [][][]string {
 func createJumpAddress(labels map[string]int, line [][]string, memoryAdress int) [][]string {
 	var targetLine int = labels[line[1][0]]
 	if targetLine == 0 {
-		compileTimeBug = append(compileTimeBug, "Undefined label \""+line[1][0]+"\"")
+		compileTimeBug = append(compileTimeBug, "Undefined label \""+line[1][0]+"\" at line "+intToStr(strToInt(line[len(line)-1][0])+1))
 	}
 	var offset int = targetLine - memoryAdress
 	if offset > 0 {
@@ -779,7 +809,7 @@ loop:
 			var newAddress uint32
 			registers[15] += 8
 			newAddress = uint32(RAM[uint32(registers[15])]) | uint32(RAM[uint32(registers[15])-1])<<8 | uint32(RAM[uint32(registers[15])-2])<<16 | uint32(RAM[uint32(registers[15])-3])<<24
-			if newAddress > executionUpperBound {
+			if newAddress > stackUpperBound {
 				log.Fatal("Address out of bounds")
 			}
 			i = newAddress
@@ -812,7 +842,7 @@ loop:
 			// TO DO
 			var arg1 uint8 = RAM[i+1]
 			var arg2 uint8 = RAM[i+2]
-			if registers[arg2] <= uint64(executionUpperBound) {
+			if registers[arg2] <= uint64(stackUpperBound) {
 				log.Fatal("You cannot modify the program while running")
 			} else if registers[arg2] > uint64(RAMSize) {
 				log.Fatal("Address out of bounds")
