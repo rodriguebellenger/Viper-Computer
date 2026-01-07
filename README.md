@@ -18,7 +18,9 @@ It should work as expected if you have an up-to-date version of Go, since their 
 `--run` assembles a .vasm file and executes it with the Go implementation of the virtual machine.  
 `-time <n>` measures the average execution time.  
 `-debug` outputs the bytecodes and the assembling duration  
-```vasm --run   <file.vasm> [-time <n>] [-debug]```
+```
+vasm --run   <file.vasm> [-time <n>] [-debug]
+```
 
 `--check` checks whether a .vasm file can be assembled  
 `--emit` assembles a .vasm file and saves bytecode into a new file  
