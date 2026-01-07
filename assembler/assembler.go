@@ -166,15 +166,16 @@ var forbiddenLabels []string = []string{"R0", "R1", "R2", "R3", "R4", "R5", "R6"
 	"E", "G", "L", "NE"}
 
 type Command struct {
-    Parse       func([]string) (any, error)
-    Run         func(any) error
+	Parse func([]string) (any, error)
+	Run   func(any) error
 }
+
 var commands = map[string]func([]string){
-    "--run":   runCommand,
-    "--check": checkCommand,
-    //"--emit":  testCommand,
+	"--run":   runCommand,
+	"--check": checkCommand,
+	//"--emit":  testCommand,
 	//"--load":  loadCommand,
-	"--help":  helpCommand,
+	"--help": helpCommand,
 }
 
 //////////
@@ -185,7 +186,7 @@ func main() {
 	var args []string = os.Args[1:]
 	command, ok := commands[args[0]]
 	if !ok {
-    	log.Fatal("Unknown command, please enter --help to see the full command list.")
+		log.Fatal("Unknown command, please enter --help to see the full command list.")
 	}
 	command(args[1:])
 
@@ -237,7 +238,7 @@ func runCommand(args []string) {
 	content = content[1:]
 	var debug bool = false
 	var time_measurement bool = false
-	
+
 	for _, item := range args {
 		if item == "debug" {
 			debug = true
@@ -245,7 +246,7 @@ func runCommand(args []string) {
 			time_measurement = true
 		} else if isInt(item) {
 		} else {
-			log.Fatal("Unrecognized argument for run command : "+item)
+			log.Fatal("Unrecognized argument for run command : " + item)
 		}
 	}
 
@@ -276,21 +277,30 @@ func checkCommand(args []string) {
 	var startTime time.Time = time.Now()
 	var byteProgram []uint8 = programCleaner(assemblerProgram)
 	var elapsed time.Duration = time.Since(startTime)
-	if len(args)>1 && args[1]=="-debug" {
+	if len(args) > 1 && args[1] == "-debug" {
 		fmt.Println(byteProgram)
 		fmt.Printf("Temps : %s\n\n", elapsed)
 	}
 }
 
 func helpCommand(_ []string) {
-	fmt.Println(`Usage : 
-go run path/to/assembler.go <commands> [arguments]
-	
-The commands are : 
---run   [arguments]=path/to/file.vasm [optional]=-time x -debug  (assemble the file to bytecode and execute it through the Go bytecode interpreter. "-time x" measure the average execution time of the vasm program.)
---check [arguments]=path/to/file.vasm [optionnal]=-debug         (check if the file can be assembled. "-debug" displays the program as assembled bytes)
---emit  [arguments]=path/to/file.vasm path/to/assembled_file.vbc (save the assembled program to a specified location)
---load  [arguments]=path/to/assembled_file.vbc                   (load an assembled program and execute it)`)
+	fmt.Println(`Commands:
+  --run     Assemble a .vasm file and execute it with the Go implementation of the virtual machine
+  --check   Check whether a .vasm file can be assembled
+  --emit    Assemble a .vasm file and save bytecode into a new file
+  --load    Load and execute an assembled bytecode file
+
+Options:
+  -debug        Enable debug output (only for --run and --check)
+  -time <n>     Measure average execution time over <n> runs (--run only)
+  -c-vm         Execute the file with the C implementation of the virtual machine (--load only)
+  -go-vm        Execute the file with the Go implementation of the virtual machine (--load only)
+
+Command usage:
+  vasm --run   <file.vasm> [-time <n>] [-debug]
+  vasm --check <file.vasm> [-debug]
+  vasm --emit  <file.vasm> <output.vbc>
+  vasm --load  <file.vbc> [-c-vm/-go-vm]`)
 }
 
 /////////////////
