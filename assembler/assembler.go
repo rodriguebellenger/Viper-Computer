@@ -166,13 +166,13 @@ var forbiddenLabels []string = []string{"R0", "R1", "R2", "R3", "R4", "R5", "R6"
 	"E", "G", "L", "NE"}
 
 type Command struct {
-    Parse       func([]string) (any, error)
-    Run         func(any) error
+	Parse       func([]string) (any, error)
+	Run         func(any) error
 }
 var commands = map[string]func([]string){
-    "--run":   runCommand,
-    "--check": checkCommand,
-    //"--emit":  testCommand,
+	"--run":   runCommand,
+	"--check": checkCommand,
+	//"--emit":  testCommand,
 	//"--load":  loadCommand,
 	"--help":  helpCommand,
 }
@@ -185,7 +185,7 @@ func main() {
 	var args []string = os.Args[1:]
 	command, ok := commands[args[0]]
 	if !ok {
-    	log.Fatal("Unknown command, please enter --help to see the full command list.")
+		log.Fatal("Unknown command, please enter --help to see the full command list.")
 	}
 	command(args[1:])
 
@@ -446,7 +446,7 @@ func checkJumps(line [][]string, labels map[string]int, memoryAddress int) (int,
 			labels[string(line[0][0][:len(line[0][0])-1])] = memoryAddress - 1
 			memoryAddress -= 4
 		} else {
-			compileTimeBug = append(compileTimeBug, "Forbiddent label name \""+string(line[0][0][:len(line[0][0])-1])+"\" at line "+intToStr(strToInt(string(line[1][0]))+1))
+			compileTimeBug = append(compileTimeBug, "Forbidden label name \""+string(line[0][0][:len(line[0][0])-1])+"\" at line "+intToStr(strToInt(string(line[1][0]))+1))
 		}
 	}
 	return memoryAddress, labels
@@ -918,5 +918,5 @@ func inList(liste []string, item string) bool {
 }
 
 func isPowerOfTwo(x int) bool {
-	return x >= 2 && (x&(x-1)) == 0
+	return x > 0 && (x&(x-1)) == 0
 }
