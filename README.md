@@ -15,25 +15,26 @@ It should work as expected if you have an up-to-date version of Go, since their 
 
 ### Commands
 
-`--run` assembles a .vasm file and executes it with the Go implementation of the virtual machine.
-`-time <n>` measures the average execution time.
-`-debug` outputs the bytecodes and the assembling duration
-``vasm --run   <file.vasm> [-time <n>] [-debug]``
-`--check` checks whether a .vasm file can be assembled
-`--emit` assembles a .vasm file and saves bytecode into a new file
+`--run` assembles a .vasm file and executes it with the Go implementation of the virtual machine.  
+`-time <n>` measures the average execution time.  
+`-debug` outputs the bytecodes and the assembling duration  
+```vasm --run   <file.vasm> [-time <n>] [-debug]```
+
+`--check` checks whether a .vasm file can be assembled  
+`--emit` assembles a .vasm file and saves bytecode into a new file  
 `--load` loads and executes a .vbc file (assembled bytecode file)
 
-Options:
-  -debug        Enable debug output (only for --run and --check)
-  -time <n>     Measure average execution time over <n> runs (--run only)
-  -c-vm         Execute the file with the C implementation of the virtual machine (--load only)
-  -go-vm        Execute the file with the Go implementation of the virtual machine (--load only)
+Options:  
+  -debug        Enable debug output (only for --run and --check)  
+  -time <n>     Measure average execution time over <n> runs (--run only)  
+  -c-vm         Execute the file with the C implementation of the virtual machine (--load only)  
+  -go-vm        Execute the file with the Go implementation of the virtual machine (--load only)  
 
-Command usage:
-  vasm --run   <file.vasm> [-time <n>] [-debug]
-  vasm --check <file.vasm> [-debug]
-  vasm --emit  <file.vasm> <output.vbc>
-  vasm --load  <file.vbc> [-c-vm/-go-vm]
+Command usage:  
+  vasm --run   <file.vasm> [-time <n>] [-debug]  
+  vasm --check <file.vasm> [-debug]  
+  vasm --emit  <file.vasm> <output.vbc>  
+  vasm --load  <file.vbc> [-c-vm/-go-vm]  
 
 For how to write an actual program, please refer to the 
 examples in assembler/assembly_test.
