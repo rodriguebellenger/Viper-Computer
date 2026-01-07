@@ -41,8 +41,21 @@ go run path/to/assembler.go --load <file.vbc> [-c-vm/-go-vm]
 
 ## Syntax
 
-The instructions are all of the form : `INST [arg1] [arg2]` (with whatever number of args needed)  
-For how to write an actual program, please refer to the examples in assembler/assembly_test.  
+The instructions are almost all of the form : `INST [arg1] [arg2]` (with whatever number of args needed) and are mostly self-explanatory.   
+Special cases are :  
+- `CMP [register] [register] [COMP_OP]` with COMP_OP being either E (equal), G (greater), L (less) or NE (not equal)
+The next instruction is executed only if the comparison is true.  
+- `READ [@Size] [*register] [register]` with @Size being either @8, @16, @24, @32, @40, @48, @56 or @64.  
+The size indicates the number of bytes which will be read. *register will take the value of the register as an address and the value read will be stored in register.  
+- `WRT [register] [@Size] [*register]` with @Size being either @8, @16, @24, @32, @40, @48, @56 or @64.  
+Same as READ except the order of the arguments is changed to indicate that the value in the register will be stored in the RAM at the address within *register with size of @Size.  
+- `JMP Label` continues the program directly after where the label was defined.  
+- `CALL Label` same as JMP, except it pushes the current execution address onto the stack.  
+- `RET` jumps to the address at the top of the stack.  
+
+To create a label, enter `TheNameOfTheLabel:`. You can then refer to it via a JMP or a CALL simply by using its name without the ":".
+`JMP Label` or `Call Label`
+
 Please note that the compiler will automatically ignore every useless characters, (not alphanumerical characters and not in ":@*")  
 Hence, this is fine `,A$D,D,     %R|1/     -R_2,` and will be changed to simply `ADD R1 R2`.  
 
