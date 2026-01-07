@@ -54,7 +54,7 @@ Same as READ except the order of the arguments is changed to indicate that the v
 - `RET` jumps to the address at the top of the stack.  
 
 To create a label, enter `TheNameOfTheLabel:`. You can then refer to it via a JMP or a CALL simply by using its name without the ":".  
-`JMP Label` or `Call Label`
+`JMP Label` or `CALL Label`
 
 Please note that the compiler will automatically ignore every useless characters, (not alphanumerical characters and not in ":@*")  
 Hence, this is fine `,A$D,D,     %R|1/     -R_2,` and will be changed to simply `ADD R1 R2`.  
