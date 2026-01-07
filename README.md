@@ -43,7 +43,7 @@ go run path/to/assembler.go --load <file.vbc> [-c-vm/-go-vm]
 
 The instructions are all of the form : `INST [arg1] [arg2]` (with whatever number of args needed)  
 For how to write an actual program, please refer to the examples in assembler/assembly_test.  
-Please note that the compiler will automatically ignore every useless characters, (alphanumerical characters and ":@*")  
+Please note that the compiler will automatically ignore every useless characters, (not alphanumerical characters and not in ":@*")  
 Hence, this is fine `,A$D,D,     %R|1/     -R_2,` and will be changed to simply `ADD R1 R2`.  
 
 ## Architecture
