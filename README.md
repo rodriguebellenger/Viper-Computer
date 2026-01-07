@@ -15,37 +15,43 @@ It should work as expected if you have an up-to-date version of Go, since their 
 
 ### Commands
 
-`--run` assembles a .vasm file and executes it with the Go implementation of the virtual machine.  
-`-time <n>` measures the average execution time.  
-`-debug` outputs the bytecodes and the assembling duration  
+If you want to assemble a .vasm file and execute it with the Go implementation of the virtual machine, use `--run`.  
+You can add `-time <n>` to measure the average execution time.  
+You can also add `-debug` to output the bytecodes and the assembling duration.  
 ```
-vasm --run   <file.vasm> [-time <n>] [-debug]
+go run path/to/assembler --run <file.vasm> [-time <n>] [-debug]
 ```
 
-`--check` checks whether a .vasm file can be assembled  
-`--emit` assembles a .vasm file and saves bytecode into a new file  
-`--load` loads and executes a .vbc file (assembled bytecode file)
+If you want to check whether a .vasm file can be assembled, use `--check`.  
+You can add `-debug` to output the bytecodes and the assembling duration.
+```
+go run path/to/assembler.go --check <file.vasm> [-debug]  
+``` 
 
-Options:  
-  -debug        Enable debug output (only for --run and --check)  
-  -time <n>     Measure average execution time over <n> runs (--run only)  
-  -c-vm         Execute the file with the C implementation of the virtual machine (--load only)  
-  -go-vm        Execute the file with the Go implementation of the virtual machine (--load only)  
+If you want to assemble a .vasm file and save the bytecodes into a new file, use `--emit`.
+```
+go run path/to/assembler.go --emit <file.vasm> <output.vbc> 
+```
 
-Command usage:  
-  vasm --run   <file.vasm> [-time <n>] [-debug]  
-  vasm --check <file.vasm> [-debug]  
-  vasm --emit  <file.vasm> <output.vbc>  
-  vasm --load  <file.vbc> [-c-vm/-go-vm]  
+If you want to load and execute a .vbc file (assembled bytecode file), use `--load`.  
+You must use either use `-c-vm` or `-go-vm` to specify which version of the vm you want to use.
+```
+go run path/to/assembler.go --load <file.vbc> [-c-vm/-go-vm]
+```  
 
-For how to write an actual program, please refer to the 
-examples in assembler/assembly_test.
+## Syntax
 
-There are 16 registers of 64bits from R0 to R15.
+The instructions are all of the form : `INST [arg1] [arg2]` (with whatever number of args needed)  
+For how to write an actual program, please refer to the examples in assembler/assembly_test.  
+Please note that the compiler will automatically ignore every useless characters, (alphanumerical characters and ":@*")
+Hence, this is fine `,A$D,D,     %R|1/     -R_2,` and will be changed to simply `ADD R1 R2`.  
 
+## Architecture
+
+There are 16 registers of 64bits from R0 to R15.  
 The RAM has a size of a kilobyte (but can easily be changed with RAMSize variable).
 
-The different operations possible are listed below. 
+## Operations
 
 |   | 1byte  | 1byte  | 1byte  | 1byte |Additionnal info| Works |
 |---|--------|--------|--------|-------|-|-|
