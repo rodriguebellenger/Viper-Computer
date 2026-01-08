@@ -9,6 +9,14 @@ Viper Computer is a virtual computer made for educationnal purposes.
 - Custom bytecode interpreter (C and Go implementation)
 - Debug and performance measurement tools
 
+## To Do (bear in mind this list if you want to use this project)  
+
+- JMP to the content of a register  
+- MOV the address of a label in a register  
+- --run, --emit and --load commands  
+- C version of the bytecode interpreter  
+- See list of instructions that are not implemented yet  
+
 ## How to use
 
 It should work as expected if you have an up-to-date version of Go, since their are no dependency.
