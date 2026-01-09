@@ -111,6 +111,7 @@ The RAM has a size of a kilobyte (but can easily be changed with RAMSize variabl
 |032 | MOV2W  | Register | IMM    | IMM   || Yes |
 |033 | MOV3W  | Register | IMM    | IMM   || Yes |
 |034 | MOV4W  | Register | IMM    | IMM   | most significant byte | Yes |
+|035 | MOVL   | Offset   | Offset |Offset | moves the position of a label in the register | No |
 |035 | MOVR   | Register | Register | EMPTY || No |
 |036 | SWAP   | Register | Register | EMPTY || No |
 |037 | PUSH   | Register | EMPTY  | EMPTY || No |
